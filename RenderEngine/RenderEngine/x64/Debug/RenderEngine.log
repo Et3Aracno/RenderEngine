@@ -1,1 +1,4 @@
-﻿  RenderEngine.vcxproj -> C:\Users\mluhat\source\repos\RenderEngine\x64\Debug\RenderEngine.exe
+﻿C:\Program Files\Microsoft Visual Studio\2022\Community\Msbuild\Microsoft\VC\v170\Microsoft.CppBuild.targets(538,5): warning MSB8028: Le répertoire intermédiaire (x64\Debug\) contient des fichiers partagés provenant d'un autre projet (RenderEngine.vcxproj). Cela peut entraîner un comportement de nettoyage et de regénération incorrect.
+  RenderEngine.cpp
+LINK : warning LNK4098: conflit entre la bibliothèque par défaut 'MSVCRT' et les autres bibliothèques ; utilisez /NODEFAULTLIB:library
+  RenderEngine.vcxproj -> C:\Users\Aracno\Documents\GitHub\RenderEngine\RenderEngine\x64\Debug\Editor.exe
