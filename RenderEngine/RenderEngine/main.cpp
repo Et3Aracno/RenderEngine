@@ -1,7 +1,22 @@
 #include <iostream>
+#include <vector>
+#include <cstdint>
 #include "External Lib/glfw-3.5.1.bin.WIN64/include/GLFW/glfw3.h"
 
 
+
+void drawPixel(GLFWwindow* window, int sizeX, int sizeY)
+{
+	std::vector<uint32_t> data(sizeX * sizeY);
+
+	for (int y = 0; y < sizeY; ++y)
+		for (int x = 0; x < sizeX; ++x)
+			data[y * sizeX + x] = 0xFF000000
+			| (uint32_t)(x * 255 / sizeX) << 16
+			| (uint32_t)(y * 255 / sizeY) << 8;
+
+	glDrawPixels(sizeX, sizeY, GL_RGBA, GL_UNSIGNED_BYTE, data.data());
+}
 
 
 int main()
@@ -36,7 +51,8 @@ int main()
 
 	while (!glfwWindowShouldClose(window)) {
 		glfwPollEvents();
-		glDrawPixels(250, 250, GL_RGBA, GL_UNSIGNED_BYTE, data);
+		//glDrawPixels(250, 250, GL_RGBA, GL_UNSIGNED_BYTE, data);
+		drawPixel(window, 500, 500);
 		glfwSwapBuffers(window);
 	}
 
