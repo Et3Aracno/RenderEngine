@@ -1,4 +1,0 @@
-﻿C:\Program Files\Microsoft Visual Studio\2022\Community\Msbuild\Microsoft\VC\v170\Microsoft.CppBuild.targets(538,5): warning MSB8028: Le répertoire intermédiaire (x64\Debug\) contient des fichiers partagés provenant d'un autre projet (RenderEngine.vcxproj). Cela peut entraîner un comportement de nettoyage et de regénération incorrect.
-  main.cpp
-C:\Users\Aracno\Documents\GitHub\RenderEngine\RenderEngine\RenderEngine\main.cpp(30,52): warning C4267: '=' : conversion de 'size_t' en 'int', perte possible de données
-  RenderEngine.vcxproj -> C:\Users\Aracno\Documents\GitHub\RenderEngine\RenderEngine\x64\Debug\Editor.exe
