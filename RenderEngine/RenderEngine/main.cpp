@@ -1,7 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <cstdint>
-#include "External Lib/glfw-3.5.1.bin.WIN64/include/GLFW/glfw3.h"
+#include "GLFW/glfw3.h"
 #define WIDTH  800
 #define HEIGHT 600
 
@@ -62,8 +62,42 @@ static void draw_line(int x0, int y0, int x1, int y1, uint32_t color) // draw un
 	}
 }
 
-void drawTriangle() {
+inline int edge(int x0, int y0, int x1 ,int y1, int Px, int Py) 
+{
+	return (x1 - x0) * (Py - y0) - (y1 - y0) * (Px - x0);
 
+}
+
+void drawTriangle(int x0, int y0, int x1, int y1, int Px, int Py, uint32_t color) {
+
+	int area = edge(x0, y0, x1, y1, Px, Py);
+
+	if (area == 0)
+		return;
+
+	int minx = x0 < x1 ? (x0 < Px ? x0 : Px) : (x1 < Px ? x1 : Px);
+	int miny = y0 < y1 ? (y0 < Py ? y0 : Py) : (y1 < Py ? y1 : Py);
+	int maxx = x0 > x1 ? (x0 > Px ? x0 : Px) : (x1 > Px ? x1 : Px);
+	int maxy = y0 > y1 ? (y0 > Py ? y0 : Py) : (y1 > Py ? y1 : Py);
+	if (minx < 0) minx = 0;
+	if (miny < 0) miny = 0;
+	if (maxx >= WIDTH)  maxx = WIDTH - 1;
+	if (maxy >= HEIGHT) maxy = HEIGHT - 1;
+
+	for (int y = miny; y <= maxy; y++) {
+		for (int x = minx; x <= maxx; x++) {
+			int e0 = edge(x0, y0, x1, y1, x, y);
+			int e1 = edge(x1, y1, Px, Py, x, y);
+			int e2 = edge(Px, Py, x0, x1, x, y);
+
+			if ((e0 | e1 | e2) >= 0) {
+				framebuffer[y * WIDTH + x] = color;
+			}
+
+		}
+
+
+	}
 
 }
 
@@ -79,21 +113,16 @@ int main()
 
 	GLFWwindow* window = glfwCreateWindow(800, 600, "hello", NULL, NULL);
 
-	if (!window) {
-
-		std::cout << "hello";
-	}
-
 	glfwMakeContextCurrent(window);
-	const int cx = WIDTH / 2;
-	const int cy = HEIGHT / 2;
-	const int spokes = 100;
-	const int radius = (HEIGHT / 2) - 20;
-	const double TWO_PI = 6.2831853071795864;
+	//const int cx = WIDTH / 2;
+	//const int cy = HEIGHT / 2;
+	//const int spokes = 100;
+	//const int radius = (HEIGHT / 2) - 20;
+	//const double TWO_PI = 6.2831853071795864;
 
 	while (!glfwWindowShouldClose(window)) {
 		glfwPollEvents();
-		for (int i = 0; i < spokes; i++) {
+		/*for (int i = 0; i < spokes; i++) {
 			double t = (double)i / (double)spokes * TWO_PI;
 			double ct = cos(t);
 			double st = sin(t);
@@ -102,7 +131,10 @@ int main()
 			uint8_t r = (uint8_t)(127.0 + 127.0 * ct);
 			uint8_t g = (uint8_t)(127.0 + 127.0 * st);
 			draw_line(cx, cy, ex, ey, rgb(r, g, 200));
-		}
+		}*/
+		drawTriangle(150, 480, 400, 80, 650, 480,rgb(10, 10, 255));
+
+
 		glDrawPixels(WIDTH, HEIGHT, GL_RGBA, GL_UNSIGNED_BYTE, framebuffer);
 		glfwSwapBuffers(window);
 	}
