@@ -90,7 +90,7 @@ void drawTriangle(int x0, int y0, int x1, int y1, int Px, int Py, uint32_t color
 			int e1 = edge(x1, y1, Px, Py, x, y);
 			int e2 = edge(Px, Py, x0, x1, x, y);
 
-			if ((e0 | e1 | e2) >= 0) {
+			if ((e0 | e1 | e2) >= 0) {// Comparateur binaire qui signifie que si l'un des 3 possède un bit à 1 donc négatif , if = false en revanche true si les bit des signe sont à 0 alors les pixel sont interne au triangle.
 				framebuffer[y * WIDTH + x] = color;
 			}
 
@@ -108,7 +108,6 @@ int main()
 		std::cout << "Échec de glfwInit\n";
 		return -1;
 	}
-
 
 
 	GLFWwindow* window = glfwCreateWindow(800, 600, "hello", NULL, NULL);
