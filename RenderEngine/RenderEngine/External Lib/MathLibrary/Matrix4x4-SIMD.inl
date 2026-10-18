@@ -207,6 +207,36 @@ namespace Maths
 			temp3[0] + temp3[1] + temp3[2] + temp3[3]
         );
     }
+    inline Maths::Vec3S Maths::Matrix4x4SIMD::operator*(const Maths::Vec3S& rhs) const
+    {
+        const __m128 vector = _mm_set_ps(
+            1.0f,
+            rhs.z,
+            rhs.y,
+            rhs.x
+        );
+
+        const __m128 row0 = _mm_mul_ps(values[0], vector);
+
+        const __m128 row1 = _mm_mul_ps(values[1], vector);
+
+        const __m128 row2 = _mm_mul_ps(values[2], vector);
+
+
+        alignas(16) float temp0[4];
+        alignas(16) float temp1[4];
+        alignas(16) float temp2[4];     // Alignas permet de convertir les float en tableau de float pour pouvoir les additionner ensuite
+
+        _mm_store_ps(temp0, row0);
+        _mm_store_ps(temp1, row1);
+        _mm_store_ps(temp2, row2);
+
+        return Maths::Vec3S(
+            temp0[0] + temp0[1] + temp0[2] + temp0[3],
+            temp1[0] + temp1[1] + temp1[2] + temp1[3],
+            temp2[0] + temp2[1] + temp2[2] + temp2[3]
+        );
+    }
 
     inline Maths::Matrix4x4SIMD Maths::Matrix4x4SIMD::operator*(float scalar) const
     {

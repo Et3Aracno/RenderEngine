@@ -2,16 +2,28 @@
 #include <vector>
 #include <cstdint>
 #include "GLFW/glfw3.h"
+#include "External Lib/MathLibrary/MathLib.h"
+
 #define WIDTH  800
 #define HEIGHT 600
+#define PI 3.14159265358979323846f
 
 
+#include <stdint.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <math.h>
+#include <stdlib.h>
 
 static uint32_t framebuffer[WIDTH * HEIGHT];
 
 static inline uint32_t rgb(uint8_t r, uint8_t g, uint8_t b) { // traduction rapide binaire rgb pour les couleur
 	return ((uint32_t)0xFFu << 24) | ((uint32_t)r << 16)
 		| ((uint32_t)g << 8) | (uint32_t)b;
+}
+
+static void clear(uint32_t color) {
+	for (int i = 0; i < WIDTH * HEIGHT; i++) framebuffer[i] = color;
 }
 
 static inline void put_pixel(int x, int y, uint32_t color) { // ajoute 1 pixel 
@@ -30,6 +42,7 @@ void drawPixels( int sizeX, int sizeY) // ajoute des pixel d'une coordonné x à
 
 static void draw_line(int x0, int y0, int x1, int y1, uint32_t color) // draw une ligne x1 et y1 doivent etre plus grand que x0 et y0 et ce sont eux qui modifie lal size de la ligne
 {
+
 	//int dx = x1 - x0; // delta de x
 	//int dy = y1 - y0; // delta de y
 	//int E = 2 * dy - dx; // calcul de E par rapport à delta de x et y 
@@ -47,6 +60,7 @@ static void draw_line(int x0, int y0, int x1, int y1, uint32_t color) // draw un
 	//		E = E + 2 * dy;
 	//	}
 	//}
+
 	int dx = abs(x1 - x0);
 	int dy = -abs(y1 - y0);          // dy is NEGATIVE on purpose, see below
 	int sx = (x0 < x1) ? 1 : -1;     // step direction in x
@@ -88,7 +102,7 @@ void drawTriangle(int x0, int y0, int x1, int y1, int Px, int Py, uint32_t color
 		for (int x = minx; x <= maxx; x++) {
 			int e0 = edge(x0, y0, x1, y1, x, y);
 			int e1 = edge(x1, y1, Px, Py, x, y);
-			int e2 = edge(Px, Py, x0, x1, x, y);
+			int e2 = edge(Px, Py, x0, y0, x, y);
 
 			if ((e0 | e1 | e2) >= 0) {// Comparateur binaire qui signifie que si l'un des 3 possède un bit à 1 donc négatif , if = false en revanche true si les bit des signe sont à 0 alors les pixel sont interne au triangle.
 				framebuffer[y * WIDTH + x] = color;
@@ -108,7 +122,22 @@ int main()
 		std::cout << "Échec de glfwInit\n";
 		return -1;
 	}
+	
 
+	const float R = 200.0f;
+
+	std::vector <Maths::Vec3S> base(3);
+
+	for (int i = 0; i < 3; i++) {
+		float a = (float)i / 3.0f * 2.0f * PI - PI / 2.0f;  // start at top
+		base[i] = Maths::Vec3S(R * cosf(a), R * sinf(a), 0.0f);
+	}
+
+	std::vector <Maths::Vec3S> cT(3);
+	Maths::Matrix4x4SIMD matrix4;
+	Maths::Matrix4x4SIMD matrix4RotaZ;
+	const uint64_t freq = glfwGetTimerFrequency();
+	const uint64_t start = glfwGetTimerValue();
 
 	GLFWwindow* window = glfwCreateWindow(800, 600, "hello", NULL, NULL);
 
@@ -131,13 +160,33 @@ int main()
 			uint8_t g = (uint8_t)(127.0 + 127.0 * st);
 			draw_line(cx, cy, ex, ey, rgb(r, g, 200));
 		}*/
-		drawTriangle(150, 480, 400, 80, 650, 480,rgb(10, 10, 255));
 
+		
+		double seconds = (double)(glfwGetTimerValue() - start) / (double)freq;
+		float angle = (float)seconds;   // 1 radian par seconde
+
+		matrix4 = matrix4.Translation(Maths::Vec3S(WIDTH / 2.0f, HEIGHT / 2.0f, 0.0f));
+		matrix4RotaZ = matrix4RotaZ.RotationZ(angle);
+		matrix4 = matrix4.operator*(matrix4RotaZ);
+		for (int i = 0; i < 3; i++) 
+		{
+			cT[i] = matrix4.operator*(base[i]);
+		}
+
+
+		clear(rgb(16, 16, 24));
+
+
+		drawTriangle((int)cT[0].x, (int)cT[0].y,
+			(int)cT[1].x, (int)cT[1].y,
+			(int)cT[2].x, (int)cT[2].y, rgb(0, 0, 200));
+
+
+		//drawTriangle(150, 480, 400, 80, 650, 480,rgb(10, 10, 255));
 
 		glDrawPixels(WIDTH, HEIGHT, GL_RGBA, GL_UNSIGNED_BYTE, framebuffer);
 		glfwSwapBuffers(window);
 	}
-
 	glfwDestroyWindow(window);
 	glfwTerminate();
 	return 0;

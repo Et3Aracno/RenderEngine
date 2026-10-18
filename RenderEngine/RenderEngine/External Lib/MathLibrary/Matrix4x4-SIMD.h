@@ -31,6 +31,7 @@ namespace Maths
         Matrix4x4SIMD operator-(const Matrix4x4SIMD& rhs) const;
         Matrix4x4SIMD operator*(const Matrix4x4SIMD& rhs) const;
         Maths::Vec4S operator*(const Maths::Vec4S& rhs) const;
+        Maths::Vec3S operator*(const Maths::Vec3S& rhs) const;
         Matrix4x4SIMD operator*(float scalar) const;
         Matrix4x4SIMD& operator*=(const Matrix4x4SIMD& rhs);
         bool operator==(const Matrix4x4SIMD& rhs) const;
