@@ -135,8 +135,6 @@ void drawTriangle_z(int x0, int y0, float z0, int x1, int y1, float z1, int x2, 
 
 	if (area == 0)
 		return;
-
-
 	// Force one winding so "inside" means "all weights >= 0". We
 	// accept BOTH facing directions here (back faces are removed in
 	// chapter 8); the Z-buffer is what sorts them out for now, so we
@@ -195,71 +193,12 @@ void drawTriangle_z(int x0, int y0, float z0, int x1, int y1, float z1, int x2, 
 
 }
 
-
-
-
-
 // Promote a 3D point to a 4D homogeneous point (w = 1).
 static inline Maths::Vec4S FromPoint(Maths::Vec3S p) {
 	Maths::Vec4S v = { p.x, p.y, p.z, 1.0f };
 	return v;
 }
 
-
-
-// Projette tous les sommets du mesh avec la matrice mvp, puis dessine
-// chaque triangle en fil de fer (gris selon la profondeur).
-static void drawMesh(const Mesh& mesh, const Maths::Matrix4x4SIMD& mvp)
-{
-	const int vcount = (int)mesh.verts.size();
-	std::vector<int>   screen_x(vcount), screen_y(vcount);
-	std::vector<float> cam_depth(vcount);
-	std::vector<char>  visible(vcount);
-
-	// ---- 1. Projeter tous les sommets ----
-	float dmin = std::numeric_limits<float>::max();
-	float dmax = -std::numeric_limits<float>::max();
-	for (int i = 0; i < vcount; i++) {
-		Maths::Vec4S clip = mvp * FromPoint(mesh.verts[i]);
-
-		// Derrière la caméra : on ignore ce sommet
-		if (clip.w <= 0.0001f) { visible[i] = false; continue; }
-
-		// Division perspective puis passage NDC (-1..+1) -> pixels
-		float ndc_x = clip.x / clip.w;
-		float ndc_y = clip.y / clip.w;
-		screen_x[i] = (int)((ndc_x + 1.0f) * 0.5f * WIDTH);
-		screen_y[i] = (int)((ndc_y + 1.0f) * 0.5f * HEIGHT);
-
-		cam_depth[i] = clip.w;
-		visible[i] = true;
-		if (clip.w < dmin) dmin = clip.w;
-		if (clip.w > dmax) dmax = clip.w;
-	}
-	float drange = (dmax > dmin) ? (dmax - dmin) : 1.0f;
-
-	// ---- 2. Dessiner les triangles ----
-	for (size_t f = 0; f + 2 < mesh.faces.size(); f += 3) {
-		int a = mesh.faces[f + 0];
-		int b = mesh.faces[f + 1];
-		int c = mesh.faces[f + 2];
-
-		if (a < 0 || b < 0 || c < 0 || a >= vcount || b >= vcount || c >= vcount) continue;
-		if (!visible[a] || !visible[b] || !visible[c]) continue;
-
-		// Gris selon la profondeur : proche = clair, loin = sombre
-		float avg_d = (cam_depth[a] + cam_depth[b] + cam_depth[c]) / 3.0f;
-		float far01 = (avg_d - dmin) / drange;
-		int level = 240 - (int)(far01 * 200.0f);
-		if (level < 0) level = 0;
-		if (level > 255) level = 255;
-		uint32_t color = rgb((uint8_t)level, (uint8_t)level, (uint8_t)level);
-
-		draw_line(screen_x[a], screen_y[a], screen_x[b], screen_y[b], color);
-		draw_line(screen_x[b], screen_y[b], screen_x[c], screen_y[c], color);
-		draw_line(screen_x[c], screen_y[c], screen_x[a], screen_y[a], color);
-	}
-}
 static void drawMeshZ(const Mesh& mesh, const Maths::Matrix4x4SIMD& mvp)
 {
 	const int vcount = (int)mesh.verts.size();

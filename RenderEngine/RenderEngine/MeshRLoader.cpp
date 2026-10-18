@@ -12,6 +12,9 @@ bool MeshLoader::loadMesh(const std::string& path, Mesh& mesh)
 		return false;
 	}
 
+	//Potentiellement ajouter un check du format du fichier pour s'assurer que c'est bien un .obj
+	//pas besoin de check si c'est un fbx ou autre car on ne gère pas ce format, on ne fait que du .obj
+
 	mesh.verts.clear();
 	mesh.normals.clear();
 	mesh.faces.clear();
