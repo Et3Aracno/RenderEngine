@@ -182,7 +182,7 @@ int main()
 
 	// Camera: positioned 5 units back on +z (eye), aimed at the
 	// origin (target), with world-up being +y. See README section 5.10.
-	const Maths::Vec3S eye{ 0, 0, 5 };
+	const Maths::Vec3S eye{ 0, 0, 10 };
 	const Maths::Vec3S target{ 0, 0, 0 };
 	const Maths::Vec3S up{ 0, 1, 0 };
 	const Maths::Matrix4x4SIMD view = Maths::Matrix4x4SIMD::LookAt(eye, target, up);
@@ -255,6 +255,15 @@ int main()
 
 
 		clear(rgb(16, 16, 24));
+
+		for (int i = 0; i < 12; i++) {
+			int v0 = CUBE_EDGES[i][0];
+			int v1 = CUBE_EDGES[i][1];
+			int axis = CUBE_EDGES[i][2];
+			if (!visible[v0] || !visible[v1]) continue;
+			draw_line(screen_x[v0], screen_y[v0],
+				screen_x[v1], screen_y[v1], axis_color[axis]);
+		}
 
 
 		/*drawTriangle((int)cT[0].x, (int)cT[0].y,
