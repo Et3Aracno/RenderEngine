@@ -290,6 +290,12 @@ inline Maths::Vec4S Maths::Vec4S::Max(const Maths::Vec4S& a, const Maths::Vec4S&
 	return Store(_mm_max_ps(va, vb));
 }
 
+//inline Maths::Vec4S Maths::Vec4S::FromPoint(Maths::Vec3S p)
+//{
+//	__m128 v = _mm_setr_ps(p.x, p.y, p.z, 1.0f );
+//	return Store(v);
+//}
+
 inline const Maths::Vec4S Maths::Vec4S::Zero{ 0, 0, 0, 0 };
 
 inline const Maths::Vec4S Maths::Vec4S::One{ 1, 1, 1, 1 };

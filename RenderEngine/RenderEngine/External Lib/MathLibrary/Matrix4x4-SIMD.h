@@ -22,7 +22,6 @@ namespace Maths
         explicit Matrix4x4SIMD(const std::array<float, 16>& elements);
         Matrix4x4SIMD(__m128 row0, __m128 row1, __m128 row2, __m128 row3);
 
-
         static Matrix4x4SIMD Identity();
         static Matrix4x4SIMD Zero();
         float& operator()(std::size_t row, std::size_t column);
@@ -47,6 +46,11 @@ namespace Maths
         static Matrix4x4SIMD Translation(const Vec3S& offset);
         Vec3S TransformPoint(const Vec3S& point) const; // Affine only, w = 1.
         Vec3S TransformDirection(const Vec3S& direction) const; // Affine only, w = 0.
+
+        static float radians(float degrees);
+
+        static Matrix4x4SIMD Perspective(float fovYRadians, float aspect, float near, float far);
+        static Matrix4x4SIMD LookAt(Vec3S eye, Vec3S target, Vec3S up);
     };
 }
 

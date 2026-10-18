@@ -51,6 +51,8 @@ namespace Maths
         static Vec4S Min(const Vec4S& a, const Vec4S& b);
         static Vec4S Max(const Vec4S& a, const Vec4S& b);
 
+        //static Vec4S FromPoint(Maths::Vec3S p);
+
         static const Vec4S Zero;
         static const Vec4S One;
         static const Vec4S UnitX;

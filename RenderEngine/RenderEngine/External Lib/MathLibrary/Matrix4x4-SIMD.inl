@@ -424,4 +424,35 @@ namespace Maths
         };
     }
 
+	inline float Maths::Matrix4x4SIMD::radians(float degrees)
+    {
+        return degrees * 3.14159265358979323846f / 180.0f;
+    }
+
+    inline Maths::Matrix4x4SIMD Maths::Matrix4x4SIMD::Perspective(float fovYRadians, float aspect, float near, float far)
+    {
+        float y_scale = 1.0f / std::tanf(fovYRadians / 0.5f);
+        float x_scale = y_scale / aspect;
+
+        return Matrix4x4SIMD(
+            _mm_setr_ps(x_scale / aspect, 0.0f, 0.0f, 0.0f),
+            _mm_setr_ps(0.0f, y_scale, 0.0f, 0.0f),
+            _mm_setr_ps(0.0f, 0.0f, (far + near) / (near - far), (2.0f * far * near) / (near - far)),
+            _mm_setr_ps(0.0f, 0.0f, -1.0f, 0.0f)
+        );
+	}
+
+    inline Maths::Matrix4x4SIMD Maths::Matrix4x4SIMD::LookAt(Vec3S eye, Vec3S target, Vec3S up)
+    {
+        Vec3S foward = (eye - target).Normalize();
+        Vec3S right = up.Cross(foward).Normalize();
+        Vec3S cam_up = foward.Cross(right);
+
+        return Matrix4x4SIMD(
+            _mm_setr_ps(right.x, up.x, foward.x, 0.0f),
+            _mm_setr_ps(right.y, up.y, foward.y, 0.0f),
+            _mm_setr_ps(right.z, up.z, foward.z, 0.0f),
+            _mm_setr_ps(-right.Dot(eye), -up.Dot(eye), -foward.Dot(eye), 1.0f)
+        );
+	}
 }
