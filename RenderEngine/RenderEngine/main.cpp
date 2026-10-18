@@ -13,11 +13,12 @@
 #define WIDTH  800
 #define HEIGHT 600
 #define PI 3.14159265358979323846f
-
+#define USE_ZBUFFER true
 
 
 
 static uint32_t framebuffer[WIDTH * HEIGHT];
+static float    zbuffer[WIDTH * HEIGHT];
 
 static inline uint32_t rgb(uint8_t r, uint8_t g, uint8_t b) { // traduction rapide binaire rgb pour les couleur
 	return ((uint32_t)0xFFu << 24) | ((uint32_t)r << 16)
@@ -26,6 +27,10 @@ static inline uint32_t rgb(uint8_t r, uint8_t g, uint8_t b) { // traduction rapi
 
 static void clear(uint32_t color) {
 	for (int i = 0; i < WIDTH * HEIGHT; i++) framebuffer[i] = color;
+}
+
+static void clear_zbuffer(void) {
+	for (int i = 0; i < WIDTH * HEIGHT; i++) zbuffer[i] = 1e30f;
 }
 
 static inline void put_pixel(int x, int y, uint32_t color) { // ajoute 1 pixel 
@@ -118,6 +123,80 @@ void drawTriangle(int x0, int y0, int x1, int y1, int Px, int Py, uint32_t color
 }
 
 
+static inline int clampi(int v, int lo, int hi) {
+	return v < lo ? lo : (v > hi ? hi : v);
+}
+
+
+
+void drawTriangle_z(int x0, int y0, float z0, int x1, int y1, float z1, int x2, int y2, float z2, float zmin, float zrange) 
+{
+	int area = edge(x0, y0, x1, y1, x2, y2);
+
+	if (area == 0)
+		return;
+
+
+	// Force one winding so "inside" means "all weights >= 0". We
+	// accept BOTH facing directions here (back faces are removed in
+	// chapter 8); the Z-buffer is what sorts them out for now, so we
+	// must be able to fill a triangle of either winding. Swapping
+	// vertices 1 and 2 flips a negative area positive — and the
+	// depth z1/z2 must ride along with their vertices.
+	if (area < 0) {
+		int   tx = x1; int ty = y1; float tz = z1;
+		x1 = x2; y1 = y2; z1 = z2;
+		x2 = tx; y2 = ty; z2 = tz;
+		area = -area;
+	}
+
+	// Bounding box, clamped to the screen.
+	int minx = clampi(x0 < x1 ? (x0 < x2 ? x0 : x2) : (x1 < x2 ? x1 : x2), 0, WIDTH - 1);
+	int miny = clampi(y0 < y1 ? (y0 < y2 ? y0 : y2) : (y1 < y2 ? y1 : y2), 0, HEIGHT - 1);
+	int maxx = clampi(x0 > x1 ? (x0 > x2 ? x0 : x2) : (x1 > x2 ? x1 : x2), 0, WIDTH - 1);
+	int maxy = clampi(y0 > y1 ? (y0 > y2 ? y0 : y2) : (y1 > y2 ? y1 : y2), 0, HEIGHT - 1);
+
+	float inv_area = 1.0f / (float)area;
+
+	for (int y = miny; y <= maxy; y++) {
+		for (int x = minx; x <= maxx; x++) {
+			int e0 = edge(x1, y1, x2, y2, x, y);
+			int e1 = edge(x2, y2, x0, y0, x, y);
+			int e2 = edge(x0, y0, x1, y1, x, y);
+			if ((e0 | e1 | e2) < 0) continue;   // outside the triangle
+
+			// Barycentric weights, normalised to sum to 1.
+			float l0 = e0 * inv_area;
+			float l1 = e1 * inv_area;
+			float l2 = e2 * inv_area;
+
+			// Interpolate depth. NDC z is an AFFINE function of the
+			// screen position, so plain screen-space barycentric
+			// interpolation is exactly correct for it — no
+			// perspective correction needed (that comes in chapter 9,
+			// for textures). Smaller z = nearer the camera.
+			float z = l0 * z0 + l1 * z1 + l2 * z2;
+
+			int idx = y * WIDTH + x;
+#if USE_ZBUFFER
+			if (z >= zbuffer[idx]) continue;    // something nearer is already here
+			zbuffer[idx] = z;
+#endif
+			// Shade by depth: map [zmin .. zmax] to bright .. dim.
+			float far01 = (z - zmin) / zrange;          // 0 near, 1 far
+			int level = 240 - (int)(far01 * 200.0f);    // 240 near .. 40 far
+			level = clampi(level, 0, 255);
+			framebuffer[idx] = rgb((uint8_t)level, (uint8_t)level, (uint8_t)level);
+		}
+	}
+
+
+
+
+}
+
+
+
 
 
 // Promote a 3D point to a 4D homogeneous point (w = 1).
@@ -181,6 +260,50 @@ static void drawMesh(const Mesh& mesh, const Maths::Matrix4x4SIMD& mvp)
 		draw_line(screen_x[c], screen_y[c], screen_x[a], screen_y[a], color);
 	}
 }
+static void drawMeshZ(const Mesh& mesh, const Maths::Matrix4x4SIMD& mvp)
+{
+	const int vcount = (int)mesh.verts.size();
+	std::vector<int>   screen_x(vcount), screen_y(vcount);
+	std::vector<float> ndc_z(vcount);
+	std::vector<char>  visible(vcount);
+
+	// ---- 1. Projeter tous les sommets ----
+	float zmin = 1e30f, zmax = -1e30f;
+	for (int i = 0; i < vcount; i++) {
+		Maths::Vec4S clip = mvp * FromPoint(mesh.verts[i]);
+
+		if (clip.w <= 0.0001f) { visible[i] = false; continue; }
+
+		float ndc_x = clip.x / clip.w;
+		float ndc_y = clip.y / clip.w;
+		float nz = clip.z / clip.w;
+
+		screen_x[i] = (int)((ndc_x + 1.0f) * 0.5f * WIDTH);
+		screen_y[i] = (int)((ndc_y + 1.0f) * 0.5f * HEIGHT);   // garde TON réglage d'inversion
+		ndc_z[i] = nz;
+		visible[i] = true;
+
+		if (nz < zmin) zmin = nz;
+		if (nz > zmax) zmax = nz;
+	}
+	float zrange = (zmax > zmin) ? (zmax - zmin) : 1.0f;
+
+	// ---- 2. Remplir les triangles (l'ordre n'a plus d'importance) ----
+	for (size_t f = 0; f + 2 < mesh.faces.size(); f += 3) {
+		int a = mesh.faces[f + 0];
+		int b = mesh.faces[f + 1];
+		int c = mesh.faces[f + 2];
+
+		if (a < 0 || b < 0 || c < 0 || a >= vcount || b >= vcount || c >= vcount) continue;
+		if (!visible[a] || !visible[b] || !visible[c]) continue;
+
+		drawTriangle_z(screen_x[a], screen_y[a], ndc_z[a],
+			screen_x[b], screen_y[b], ndc_z[b],
+			screen_x[c], screen_y[c], ndc_z[c],
+			zmin, zrange);
+	}
+}
+
 
 // The 8 corners of a unit cube, centred on the origin (each
 // coordinate is +1 or -1).
@@ -328,9 +451,10 @@ int main()
 
 
 		clear(rgb(16, 16, 24));
+		clear_zbuffer();
 
 
-		drawMesh(mesh, mvp);
+		drawMeshZ(mesh, mvp); //fonctions drawMesh adapter pour le Zbuffer et le remplissage des triangles
 
 		//for (int i = 0; i < 12; i++) {
 		//	int v0 = CUBE_EDGES[i][0];
