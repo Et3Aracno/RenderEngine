@@ -109,7 +109,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)External Lib\glfw-3.5.1.bin.WIN64\include;$(SolutionDir)Engine\External Lib\MathLibrary;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)External Lib\glfw-3.5.1.bin.WIN64\include;$(SolutionDir)Engine\External Lib\MathLibrary;$(SolutionDir)External Lib\assets;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -135,9 +135,11 @@
   <ItemGroup>
     <ClCompile Include="EditorCore.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="MeshRLoader.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="EditorCore.h" />
+    <ClInclude Include="MeshRLoader.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

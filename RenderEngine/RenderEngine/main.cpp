@@ -1,19 +1,21 @@
 #include <iostream>
 #include <vector>
-#include <cstdint>
+#include <stdint.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <math.h>
+#include <stdlib.h>
+#include <limits>
 #include "GLFW/glfw3.h"
 #include "External Lib/MathLibrary/MathLib.h"
+#include "MeshRLoader.h"
 
 #define WIDTH  800
 #define HEIGHT 600
 #define PI 3.14159265358979323846f
 
 
-#include <stdint.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <math.h>
-#include <stdlib.h>
+
 
 static uint32_t framebuffer[WIDTH * HEIGHT];
 
@@ -115,10 +117,69 @@ void drawTriangle(int x0, int y0, int x1, int y1, int Px, int Py, uint32_t color
 
 }
 
+
+
+
 // Promote a 3D point to a 4D homogeneous point (w = 1).
 static inline Maths::Vec4S FromPoint(Maths::Vec3S p) {
 	Maths::Vec4S v = { p.x, p.y, p.z, 1.0f };
 	return v;
+}
+
+
+
+// Projette tous les sommets du mesh avec la matrice mvp, puis dessine
+// chaque triangle en fil de fer (gris selon la profondeur).
+static void drawMesh(const Mesh& mesh, const Maths::Matrix4x4SIMD& mvp)
+{
+	const int vcount = (int)mesh.verts.size();
+	std::vector<int>   screen_x(vcount), screen_y(vcount);
+	std::vector<float> cam_depth(vcount);
+	std::vector<char>  visible(vcount);
+
+	// ---- 1. Projeter tous les sommets ----
+	float dmin = std::numeric_limits<float>::max();
+	float dmax = -std::numeric_limits<float>::max();
+	for (int i = 0; i < vcount; i++) {
+		Maths::Vec4S clip = mvp * FromPoint(mesh.verts[i]);
+
+		// Derrière la caméra : on ignore ce sommet
+		if (clip.w <= 0.0001f) { visible[i] = false; continue; }
+
+		// Division perspective puis passage NDC (-1..+1) -> pixels
+		float ndc_x = clip.x / clip.w;
+		float ndc_y = clip.y / clip.w;
+		screen_x[i] = (int)((ndc_x + 1.0f) * 0.5f * WIDTH);
+		screen_y[i] = (int)((ndc_y + 1.0f) * 0.5f * HEIGHT);
+
+		cam_depth[i] = clip.w;
+		visible[i] = true;
+		if (clip.w < dmin) dmin = clip.w;
+		if (clip.w > dmax) dmax = clip.w;
+	}
+	float drange = (dmax > dmin) ? (dmax - dmin) : 1.0f;
+
+	// ---- 2. Dessiner les triangles ----
+	for (size_t f = 0; f + 2 < mesh.faces.size(); f += 3) {
+		int a = mesh.faces[f + 0];
+		int b = mesh.faces[f + 1];
+		int c = mesh.faces[f + 2];
+
+		if (a < 0 || b < 0 || c < 0 || a >= vcount || b >= vcount || c >= vcount) continue;
+		if (!visible[a] || !visible[b] || !visible[c]) continue;
+
+		// Gris selon la profondeur : proche = clair, loin = sombre
+		float avg_d = (cam_depth[a] + cam_depth[b] + cam_depth[c]) / 3.0f;
+		float far01 = (avg_d - dmin) / drange;
+		int level = 240 - (int)(far01 * 200.0f);
+		if (level < 0) level = 0;
+		if (level > 255) level = 255;
+		uint32_t color = rgb((uint8_t)level, (uint8_t)level, (uint8_t)level);
+
+		draw_line(screen_x[a], screen_y[a], screen_x[b], screen_y[b], color);
+		draw_line(screen_x[b], screen_y[b], screen_x[c], screen_y[c], color);
+		draw_line(screen_x[c], screen_y[c], screen_x[a], screen_y[a], color);
+	}
 }
 
 // The 8 corners of a unit cube, centred on the origin (each
@@ -144,6 +205,12 @@ int main()
 		return -1;
 	}
 	
+	Mesh mesh;
+	if (!MeshLoader::loadMesh("assets/spot.obj", mesh))
+		return 1;
+
+	std::cout << "loaded: " << mesh.verts.size() << " vertices, "
+		<< mesh.faces.size() / 3 << " triangles\n";
 
 	// Edge colour per axis (rgb() isn't a compile-time constant, so
 	// we fill this at runtime rather than as a static initializer).
@@ -154,14 +221,14 @@ int main()
 
 	//////////////////////////////
 
-	const float R = 200.0f;
+	//const float R = 200.0f;
 
-	std::vector <Maths::Vec3S> base(3);
+	//std::vector <Maths::Vec3S> base(3);
 
-	for (int i = 0; i < 3; i++) {
-		float a = (float)i / 3.0f * 2.0f * PI - PI / 2.0f;  // start at top
-		base[i] = Maths::Vec3S(R * cosf(a), R * sinf(a), 0.0f);
-	}
+	//for (int i = 0; i < 3; i++) {
+	//	float a = (float)i / 3.0f * 2.0f * PI - PI / 2.0f;  // start at top				triangle de base pour rotation , création des 3 points du triangle avec une rotation de 120° entre chaque point
+	//	base[i] = Maths::Vec3S(R * cosf(a), R * sinf(a), 0.0f);
+	//}
 
 	std::vector <Maths::Vec3S> cT(3);
 	Maths::Matrix4x4SIMD matrix4;
@@ -200,7 +267,7 @@ int main()
 			double t = (double)i / (double)spokes * TWO_PI;
 			double ct = cos(t);
 			double st = sin(t);
-			int ex = cx + (int)(radius * ct);
+			int ex = cx + (int)(radius * ct);							
 			int ey = cy + (int)(radius * st);
 			uint8_t r = (uint8_t)(127.0 + 127.0 * ct);
 			uint8_t g = (uint8_t)(127.0 + 127.0 * st);
@@ -208,14 +275,20 @@ int main()
 		}*/
 
 		
-		double seconds = (double)(glfwGetTimerValue() - start) / (double)freq;
+		double seconds = (double)(glfwGetTimerValue() - start) / (double)freq;		//tick / frequence  = temps en seconde					
 		float angle = (float)seconds;   // 1 radian par seconde
 
 		// Build the model matrix: spin around y, and a bit around x,
 		// so we see the cube from a lively angle. Then chain the three
 		// matrices into one (reads right-to-left: model, then view,
 		// then projection — README section 5.11).
-		Maths::Matrix4x4SIMD model = Maths::Matrix4x4SIMD::RotationY(0.8f) * Maths::Matrix4x4SIMD::RotationX(0.5f);
+		//Maths::Matrix4x4SIMD model = Maths::Matrix4x4SIMD::RotationY(0.8f) * Maths::Matrix4x4SIMD::RotationX(0.5f);
+		//Maths::Matrix4x4SIMD mvp = projection * view * model;
+
+
+
+
+		Maths::Matrix4x4SIMD model = Maths::Matrix4x4SIMD::RotationY(angle * 0.7f);
 		Maths::Matrix4x4SIMD mvp = projection * view * model;
 
 		// Run all 8 cube corners through the pipeline, storing the
@@ -248,7 +321,7 @@ int main()
 		/*matrix4 = matrix4.Translation(Maths::Vec3S(WIDTH / 2.0f, HEIGHT / 2.0f, 0.0f));
 		matrix4RotaZ = matrix4RotaZ.RotationZ(angle);
 		matrix4 = matrix4.operator*(matrix4RotaZ);
-		for (int i = 0; i < 3; i++) 
+		for (int i = 0; i < 3; i++)										applique la matrice de rotation sur les 3 points du triangle
 		{
 			cT[i] = matrix4.operator*(base[i]);
 		}*/
@@ -256,23 +329,25 @@ int main()
 
 		clear(rgb(16, 16, 24));
 
-		for (int i = 0; i < 12; i++) {
-			int v0 = CUBE_EDGES[i][0];
-			int v1 = CUBE_EDGES[i][1];
-			int axis = CUBE_EDGES[i][2];
-			if (!visible[v0] || !visible[v1]) continue;
-			draw_line(screen_x[v0], screen_y[v0],
-				screen_x[v1], screen_y[v1], axis_color[axis]);
-		}
+
+		drawMesh(mesh, mvp);
+
+		//for (int i = 0; i < 12; i++) {
+		//	int v0 = CUBE_EDGES[i][0];
+		//	int v1 = CUBE_EDGES[i][1];									PROJECTION 3D
+		//	int axis = CUBE_EDGES[i][2];
+		//	if (!visible[v0] || !visible[v1]) continue;
+		//	draw_line(screen_x[v0], screen_y[v0],
+		//		screen_x[v1], screen_y[v1], axis_color[axis]);
+		//}
 
 
 		/*drawTriangle((int)cT[0].x, (int)cT[0].y,
-			(int)cT[1].x, (int)cT[1].y,
+			(int)cT[1].x, (int)cT[1].y,										TRIANGLE QUI TOURNE
 			(int)cT[2].x, (int)cT[2].y, rgb(0, 0, 200));*/
 
 
 		//drawTriangle(150, 480, 400, 80, 650, 480,rgb(10, 10, 255));
-
 		glDrawPixels(WIDTH, HEIGHT, GL_RGBA, GL_UNSIGNED_BYTE, framebuffer);
 		glfwSwapBuffers(window);
 	}
