@@ -13,6 +13,8 @@
 #define WIDTH  800
 #define HEIGHT 600
 #define PI 3.14159265358979323846f
+
+#define CULL_BACKFACES true
 #define USE_ZBUFFER true
 
 
@@ -227,6 +229,7 @@ static void drawMeshZ(const Mesh& mesh, const Maths::Matrix4x4SIMD& mvp)
 	}
 	float zrange = (zmax > zmin) ? (zmax - zmin) : 1.0f;
 
+	int drawn = 0, culled = 0;
 	// ---- 2. Remplir les triangles (l'ordre n'a plus d'importance) ----
 	for (size_t f = 0; f + 2 < mesh.faces.size(); f += 3) {
 		int a = mesh.faces[f + 0];
@@ -235,6 +238,18 @@ static void drawMeshZ(const Mesh& mesh, const Maths::Matrix4x4SIMD& mvp)
 
 		if (a < 0 || b < 0 || c < 0 || a >= vcount || b >= vcount || c >= vcount) continue;
 		if (!visible[a] || !visible[b] || !visible[c]) continue;
+
+		// Backface culling. The screen-space signed area tells us
+		// the triangle's winding. Because the viewport flips y,
+		// a FRONT-facing triangle comes out with a NEGATIVE area;
+		// a back-facing one is positive (and zero is edge-on /
+		// degenerate). So we keep only area < 0.
+		int area = edge(screen_x[a], screen_y[a], screen_x[b], screen_y[b], screen_x[c], screen_y[c]);
+#if CULL_BACKFACES
+		if (area >= 0) { culled++; continue; }
+#endif
+		(void)area;
+		drawn++;
 
 		drawTriangle_z(screen_x[a], screen_y[a], ndc_z[a],
 			screen_x[b], screen_y[b], ndc_z[b],
@@ -391,7 +406,6 @@ int main()
 
 		clear(rgb(16, 16, 24));
 		clear_zbuffer();
-
 
 		drawMeshZ(mesh, mvp); //fonctions drawMesh adapter pour le Zbuffer et le remplissage des triangles
 
