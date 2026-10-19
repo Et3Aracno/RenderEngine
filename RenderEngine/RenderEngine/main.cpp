@@ -260,23 +260,6 @@ static void drawMeshZ(const Mesh& mesh, const Maths::Matrix4x4SIMD& mvp)
 			zmin, zrange);
 	}
 }
-
-
-// The 8 corners of a unit cube, centred on the origin (each
-// coordinate is +1 or -1).
-static const Maths::Vec3S CUBE_VERTS[8] = {
-	{-1, -1, -1}, { 1, -1, -1}, { 1,  1, -1}, {-1,  1, -1},
-	{-1, -1,  1}, { 1, -1,  1}, { 1,  1,  1}, {-1,  1,  1},
-};
-
-// The 12 edges, as pairs of corner indices, plus an axis tag
-// (0 = runs along x, 1 = along y, 2 = along z) used to colour them.
-static const int CUBE_EDGES[12][3] = {
-	{0,1,0}, {3,2,0}, {7,6,0}, {4,5,0},   // edges along x
-	{0,3,1}, {1,2,1}, {5,6,1}, {4,7,1},   // edges along y
-	{0,4,2}, {1,5,2}, {2,6,2}, {3,7,2},   // edges along z
-};
-
 int main()
 {
 
@@ -294,25 +277,8 @@ int main()
 
 	// Edge colour per axis (rgb() isn't a compile-time constant, so
 	// we fill this at runtime rather than as a static initializer).
-	uint32_t axis_color[3];
-	axis_color[0] = rgb(230, 80, 80);   // x : red
-	axis_color[1] = rgb(80, 210, 90);   // y : green
-	axis_color[2] = rgb(90, 140, 240);   // z : blue
 
-	//////////////////////////////
 
-	//const float R = 200.0f;
-
-	//std::vector <Maths::Vec3S> base(3);
-
-	//for (int i = 0; i < 3; i++) {
-	//	float a = (float)i / 3.0f * 2.0f * PI - PI / 2.0f;  // start at top				triangle de base pour rotation , création des 3 points du triangle avec une rotation de 120° entre chaque point
-	//	base[i] = Maths::Vec3S(R * cosf(a), R * sinf(a), 0.0f);
-	//}
-
-	std::vector <Maths::Vec3S> cT(3);
-	Maths::Matrix4x4SIMD matrix4;
-	Maths::Matrix4x4SIMD matrix4RotaZ;
 	const uint64_t freq = glfwGetTimerFrequency();
 	const uint64_t start = glfwGetTimerValue();
 
@@ -335,35 +301,13 @@ int main()
 	const Maths::Matrix4x4SIMD view = Maths::Matrix4x4SIMD::LookAt(eye, target, up);
 
 	glfwMakeContextCurrent(window);
-	//const int cx = WIDTH / 2;
-	//const int cy = HEIGHT / 2;
-	//const int spokes = 100;
-	//const int radius = (HEIGHT / 2) - 20;
-	//const double TWO_PI = 6.2831853071795864;
-
 	while (!glfwWindowShouldClose(window)) {
 		glfwPollEvents();
-		/*for (int i = 0; i < spokes; i++) {
-			double t = (double)i / (double)spokes * TWO_PI;
-			double ct = cos(t);
-			double st = sin(t);
-			int ex = cx + (int)(radius * ct);							
-			int ey = cy + (int)(radius * st);
-			uint8_t r = (uint8_t)(127.0 + 127.0 * ct);
-			uint8_t g = (uint8_t)(127.0 + 127.0 * st);
-			draw_line(cx, cy, ex, ey, rgb(r, g, 200));
-		}*/
+
 
 		
 		double seconds = (double)(glfwGetTimerValue() - start) / (double)freq;		//tick / frequence  = temps en seconde					
 		float angle = (float)seconds;   // 1 radian par seconde
-
-		// Build the model matrix: spin around y, and a bit around x,
-		// so we see the cube from a lively angle. Then chain the three
-		// matrices into one (reads right-to-left: model, then view,
-		// then projection — README section 5.11).
-		//Maths::Matrix4x4SIMD model = Maths::Matrix4x4SIMD::RotationY(0.8f) * Maths::Matrix4x4SIMD::RotationX(0.5f);
-		//Maths::Matrix4x4SIMD mvp = projection * view * model;
 
 
 
@@ -371,40 +315,6 @@ int main()
 		Maths::Matrix4x4SIMD model = Maths::Matrix4x4SIMD::RotationY(angle * 0.7f);
 		Maths::Matrix4x4SIMD mvp = projection * view * model;
 
-		// Run all 8 cube corners through the pipeline, storing the
-		// resulting screen pixel of each. `visible[i]` says whether
-		// corner i ended up in front of the camera.
-		int  screen_x[8], screen_y[8];
-		bool visible[8];
-		for (int i = 0; i < 8; i++) {
-			// Step 1 — one matrix multiply (the vertex carries w = 1).
-			Maths::Vec4S clip = mvp * FromPoint(CUBE_VERTS[i]);
-
-			// Behind the camera? w came out <= 0; dividing would give
-			// garbage, so skip this corner (proper clipping is ch. 12).
-			if (clip.w <= 0.0001f) { visible[i] = false; continue; }
-
-			// Step 2 — the perspective divide. This is where distant
-			// things actually get smaller: x and y are divided by the
-			// depth that the projection matrix parked in w.
-			float ndc_x = clip.x / clip.w;     // now in -1..+1
-			float ndc_y = clip.y / clip.w;
-
-			// Step 3 — viewport remap: NDC (-1..+1) to pixels. The y
-			// term flips top-for-bottom because screen rows count down
-			// (chapter 1), while NDC has +y up.
-			screen_x[i] = (int)((ndc_x + 1.0f) * 0.5f * WIDTH);
-			screen_y[i] = (int)((1.0f - (ndc_y + 1.0f) * 0.5f) * HEIGHT);
-			visible[i] = true;
-		}
-
-		/*matrix4 = matrix4.Translation(Maths::Vec3S(WIDTH / 2.0f, HEIGHT / 2.0f, 0.0f));
-		matrix4RotaZ = matrix4RotaZ.RotationZ(angle);
-		matrix4 = matrix4.operator*(matrix4RotaZ);
-		for (int i = 0; i < 3; i++)										applique la matrice de rotation sur les 3 points du triangle
-		{
-			cT[i] = matrix4.operator*(base[i]);
-		}*/
 
 
 		clear(rgb(16, 16, 24));
@@ -412,22 +322,7 @@ int main()
 
 		drawMeshZ(mesh, mvp); //fonctions drawMesh adapter pour le Zbuffer et le remplissage des triangles
 
-		//for (int i = 0; i < 12; i++) {
-		//	int v0 = CUBE_EDGES[i][0];
-		//	int v1 = CUBE_EDGES[i][1];									PROJECTION 3D
-		//	int axis = CUBE_EDGES[i][2];
-		//	if (!visible[v0] || !visible[v1]) continue;
-		//	draw_line(screen_x[v0], screen_y[v0],
-		//		screen_x[v1], screen_y[v1], axis_color[axis]);
-		//}
 
-
-		/*drawTriangle((int)cT[0].x, (int)cT[0].y,
-			(int)cT[1].x, (int)cT[1].y,										TRIANGLE QUI TOURNE
-			(int)cT[2].x, (int)cT[2].y, rgb(0, 0, 200));*/
-
-
-		//drawTriangle(150, 480, 400, 80, 650, 480,rgb(10, 10, 255));
 		glDrawPixels(WIDTH, HEIGHT, GL_RGBA, GL_UNSIGNED_BYTE, framebuffer);
 		glfwSwapBuffers(window);
 	}
