@@ -7,6 +7,7 @@ struct Mesh
 {
 	std::vector<Maths::Vec3S> verts;
 	std::vector<Maths::Vec3S> normals;
+	std::vector<Maths::Vec2S> texture;
 	std::vector<int> faces;   // 3 ints par triangle
 };
 

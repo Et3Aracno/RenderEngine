@@ -18,7 +18,6 @@
 #define USE_ZBUFFER true
 
 
-
 static uint32_t framebuffer[WIDTH * HEIGHT];
 static float    zbuffer[WIDTH * HEIGHT];
 
@@ -32,7 +31,7 @@ static void clear(uint32_t color) {
 }
 
 static void clear_zbuffer(void) {
-	for (int i = 0; i < WIDTH * HEIGHT; i++) zbuffer[i] = 1e30f;
+	for (int i = 0; i < WIDTH * HEIGHT; i++) zbuffer[i] = std::numeric_limits<float>::max();
 }
 
 static inline void put_pixel(int x, int y, uint32_t color) { // ajoute 1 pixel 
@@ -208,8 +207,11 @@ static void drawMeshZ(const Mesh& mesh, const Maths::Matrix4x4SIMD& mvp)
 	std::vector<float> ndc_z(vcount);
 	std::vector<char>  visible(vcount);
 
-	// ---- 1. Projeter tous les sommets ----
-	float zmin = 1e30f, zmax = -1e30f;
+	
+	float zmin = std::numeric_limits<float>::min(),
+
+		  zmax = std::numeric_limits<float>::max();
+
 	for (int i = 0; i < vcount; i++) {
 		Maths::Vec4S clip = mvp * FromPoint(mesh.verts[i]);
 
@@ -220,7 +222,7 @@ static void drawMeshZ(const Mesh& mesh, const Maths::Matrix4x4SIMD& mvp)
 		float nz = clip.z / clip.w;
 
 		screen_x[i] = (int)((ndc_x + 1.0f) * 0.5f * WIDTH);
-		screen_y[i] = (int)((ndc_y + 1.0f) * 0.5f * HEIGHT);   // garde TON réglage d'inversion
+		screen_y[i] = (int)(( ndc_y + 1.0f) * 0.5f * HEIGHT);
 		ndc_z[i] = nz;
 		visible[i] = true;
 
@@ -230,14 +232,14 @@ static void drawMeshZ(const Mesh& mesh, const Maths::Matrix4x4SIMD& mvp)
 	float zrange = (zmax > zmin) ? (zmax - zmin) : 1.0f;
 
 	int drawn = 0, culled = 0;
-	// ---- 2. Remplir les triangles (l'ordre n'a plus d'importance) ----
+
 	for (size_t f = 0; f + 2 < mesh.faces.size(); f += 3) {
 		int a = mesh.faces[f + 0];
 		int b = mesh.faces[f + 1];
 		int c = mesh.faces[f + 2];
 
-		if (a < 0 || b < 0 || c < 0 || a >= vcount || b >= vcount || c >= vcount) continue;
-		if (!visible[a] || !visible[b] || !visible[c]) continue;
+		if (a < 0 || b < 0 || c < 0 || a >= vcount || b >= vcount || c >= vcount) continue; // en dehors du tb 
+		if (!visible[a] || !visible[b] || !visible[c]) continue; // derriere la cam
 
 		// Backface culling. The screen-space signed area tells us
 		// the triangle's winding. Because the viewport flips y,
@@ -245,6 +247,7 @@ static void drawMeshZ(const Mesh& mesh, const Maths::Matrix4x4SIMD& mvp)
 		// a back-facing one is positive (and zero is edge-on /
 		// degenerate). So we keep only area < 0.
 		int area = edge(screen_x[a], screen_y[a], screen_x[b], screen_y[b], screen_x[c], screen_y[c]);
+
 #if CULL_BACKFACES
 		if (area >= 0) { culled++; continue; }
 #endif

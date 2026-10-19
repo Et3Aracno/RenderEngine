@@ -32,6 +32,14 @@ bool MeshLoader::loadMesh(const std::string& path, Mesh& mesh)
 			if (iss >> x >> y >> z)
 				mesh.verts.push_back(Maths::Vec3S(x, y, z));
 		}
+
+		else if (type == "vt")
+		{
+			float u, v;
+			if (iss >> u >> v)
+				mesh.texture.push_back(Maths::Vec2S(u,v));
+		}
+
 		else if (type == "vn")
 		{
 			float x, y, z;
@@ -41,11 +49,12 @@ bool MeshLoader::loadMesh(const std::string& path, Mesh& mesh)
 		else if (type == "f")
 		{
 			std::string token;
-			while (iss >> token)   // "1", "1/2", "1/2/3" ou "1//3"
+			while (iss >> token)
 			{
 				int index = std::stoi(token);   // lit le nombre du début, s'arrête au '/'
 				mesh.faces.push_back(index - 1); // OBJ commence à 1
 			}
+			std::size_t slash = token.find('/');
 		}
 		// toute autre ligne est ignorée
 	}

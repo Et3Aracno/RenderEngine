@@ -7,4 +7,7 @@
 #include "Vec3S.h"
 #include "Vec4.h"
 #include "Vec4S.h"
+#include "Vec2S.h"
+#include "Vec2.h"
+#include "Vec2dS.h"
 #include "SOA_AOS.h"
