@@ -9,6 +9,7 @@
 #include "GLFW/glfw3.h"
 #include "External Lib/MathLibrary/MathLib.h"
 #include "MeshRLoader.h"
+#include "Texture.h"
 
 #define WIDTH  800
 #define HEIGHT 600
@@ -16,14 +17,15 @@
 
 #define CULL_BACKFACES true
 #define USE_ZBUFFER true
+#define PERSPECTIVE_CORRECT true
 
 
 static uint32_t framebuffer[WIDTH * HEIGHT];
 static float    zbuffer[WIDTH * HEIGHT];
 
-static inline uint32_t rgb(uint8_t r, uint8_t g, uint8_t b) { // traduction rapide binaire rgb pour les couleur
-	return ((uint32_t)0xFFu << 24) | ((uint32_t)r << 16)
-		| ((uint32_t)g << 8) | (uint32_t)b;
+static inline uint32_t rgb(uint8_t r, uint8_t g, uint8_t b) {
+	return ((uint32_t)0xFFu << 24) | ((uint32_t)b << 16)
+		| ((uint32_t)g << 8) | (uint32_t)r;
 }
 
 static void clear(uint32_t color) {
@@ -194,11 +196,88 @@ void drawTriangle_z(int x0, int y0, float z0, int x1, int y1, float z1, int x2, 
 
 }
 
+
+void drawTriangle_Textured(int x0, int y0, float z0, float iw0, Maths::Vec2S uv0, int x1, int y1, float z1, float iw1, Maths::Vec2S uv1, int x2, int y2, float z2, float iw2, Maths::Vec2S uv2, const Texture& tex)
+{
+	int area = edge(x0, y0, x1, y1, x2, y2);
+
+	if (area == 0)
+		return;
+
+
+	if (area < 0) {
+		int tx = x1, ty = y1;
+		float tz = z1, tiw = iw1;
+		Maths::Vec2S tuv = uv1;
+		x1 = x2; y1 = y2;
+		z1 = z2; iw1 = iw2;
+		uv1 = uv2;
+		x2 = tx;
+		y2 = ty;
+		z2 = tz; iw2 = tiw;
+		uv2 = tuv;
+		area = -area;
+	}
+
+
+	// Bounding box, clamped to the screen.
+	int minx = clampi(x0 < x1 ? (x0 < x2 ? x0 : x2) : (x1 < x2 ? x1 : x2), 0, WIDTH - 1);
+	int miny = clampi(y0 < y1 ? (y0 < y2 ? y0 : y2) : (y1 < y2 ? y1 : y2), 0, HEIGHT - 1);
+	int maxx = clampi(x0 > x1 ? (x0 > x2 ? x0 : x2) : (x1 > x2 ? x1 : x2), 0, WIDTH - 1);
+	int maxy = clampi(y0 > y1 ? (y0 > y2 ? y0 : y2) : (y1 > y2 ? y1 : y2), 0, HEIGHT - 1);
+
+	float inv_area = 1.0f / (float)area;
+
+	float u0w = uv0.x * iw0, v0w = uv0.y * iw0;
+	float u1w = uv1.x * iw1, v1w = uv1.y * iw1;
+	float u2w = uv2.x * iw2, v2w = uv2.y * iw2;
+
+
+	for (int y = miny; y <= maxy; y++) {
+		for (int x = minx; x <= maxx; x++) {
+			int e0 = edge(x1, y1, x2, y2, x, y);
+			int e1 = edge(x2, y2, x0, y0, x, y);
+			int e2 = edge(x0, y0, x1, y1, x, y);
+			if ((e0 | e1 | e2) < 0) continue;   // outside the triangle
+
+			// Barycentric weights, normalised to sum to 1.
+			float l0 = e0 * inv_area;
+			float l1 = e1 * inv_area;
+			float l2 = e2 * inv_area;
+
+			// Interpolate depth. z = depth of the pixel in ndc space
+			float z = l0 * z0 + l1 * z1 + l2 * z2;
+
+
+			int idx = y * WIDTH + x;
+			if (z >= zbuffer[idx]) continue;
+
+#if PERSPECTIVE_CORRECT
+			// Interpolate u/w, v/w, 1/w linearly, then divide back.
+			float uw = l0 * u0w + l1 * u1w + l2 * u2w;
+			float vw = l0 * v0w + l1 * v1w + l2 * v2w;
+			float iw = l0 * iw0 + l1 * iw1 + l2 * iw2;
+			float u = uw / iw;
+			float v = vw / iw;
+#else
+			// Naive: interpolate u, v directly in screen space. Wrong
+			// under perspective — the texture visibly warps.
+			float u = l0 * uv0.x + l1 * uv1.x + l2 * uv2.x;
+			float v = l0 * uv0.y + l1 * uv1.y + l2 * uv2.y;
+
+
+#endif
+			zbuffer[idx] = z;
+			framebuffer[idx] = tex.sample(u, v);
+		}
+	}
+}
+
 // Promote a 3D point to a 4D homogeneous point (w = 1).
 static inline Maths::Vec4S FromPoint(Maths::Vec3S p) {
 	Maths::Vec4S v = { p.x, p.y, p.z, 1.0f };
 	return v;
-}
+} 
 
 static void drawMeshZ(const Mesh& mesh, const Maths::Matrix4x4SIMD& mvp)
 {
@@ -254,10 +333,68 @@ static void drawMeshZ(const Mesh& mesh, const Maths::Matrix4x4SIMD& mvp)
 		(void)area;
 		drawn++;
 
+		int ua = mesh.texFaces[f * 3 + 0];
+		int ub = mesh.texFaces[f * 3 + 1];
+		int uc = mesh.texFaces[f * 3 + 2];
 		drawTriangle_z(screen_x[a], screen_y[a], ndc_z[a],
 			screen_x[b], screen_y[b], ndc_z[b],
 			screen_x[c], screen_y[c], ndc_z[c],
 			zmin, zrange);
+	}
+}
+
+static void drawMeshTextured(const Mesh& mesh, const Maths::Matrix4x4SIMD& mvp, const Texture& tex)
+{
+	const int vcount = (int)mesh.verts.size();
+	const int tcount = (int)mesh.textures.size();
+	std::vector<int>   screen_x(vcount), screen_y(vcount);
+	std::vector<float> ndc_z(vcount), inv_w(vcount);
+	std::vector<char>  visible(vcount);
+
+	for (int i = 0; i < vcount; i++) {
+		Maths::Vec4S clip = mvp * FromPoint(mesh.verts[i]);
+
+		if (clip.w <= 0.0001f) { visible[i] = false; continue; }
+
+		float inv = 1.0f / clip.w;
+		float ndc_x = clip.x * inv;
+		float ndc_y = clip.y * inv;
+
+		screen_x[i] = (int)((ndc_x + 1.0f) * 0.5f * WIDTH);
+		screen_y[i] = (int)((ndc_y + 1.0f) * 0.5f * HEIGHT);
+		ndc_z[i] = clip.z * inv;
+		inv_w[i] = inv;
+		visible[i] = true;
+	}
+
+	int drawn = 0, culled = 0;
+
+	for (size_t f = 0; f + 2 < mesh.faces.size(); f += 3) {
+		int a = mesh.faces[f + 0];
+		int b = mesh.faces[f + 1];
+		int c = mesh.faces[f + 2];
+
+		if (a < 0 || b < 0 || c < 0 || a >= vcount || b >= vcount || c >= vcount) continue;
+		if (!visible[a] || !visible[b] || !visible[c]) continue;
+
+		int area = edge(screen_x[a], screen_y[a], screen_x[b], screen_y[b], screen_x[c], screen_y[c]);
+#if CULL_BACKFACES
+		if (area <= 0) { culled++; continue; }
+#endif
+		drawn++;
+
+		int ua = mesh.texFaces[f + 0];
+		int ub = mesh.texFaces[f + 1];
+		int uc = mesh.texFaces[f + 2];
+
+		Maths::Vec2S uva = (ua >= 0 && ua < tcount) ? mesh.textures[ua] : Maths::Vec2S(0, 0);
+		Maths::Vec2S uvb = (ub >= 0 && ub < tcount) ? mesh.textures[ub] : Maths::Vec2S(0, 0);
+		Maths::Vec2S uvc = (uc >= 0 && uc < tcount) ? mesh.textures[uc] : Maths::Vec2S(0, 0);
+
+		drawTriangle_Textured(screen_x[a], screen_y[a], ndc_z[a], inv_w[a], uva,
+			screen_x[b], screen_y[b], ndc_z[b], inv_w[b], uvb,
+			screen_x[c], screen_y[c], ndc_z[c], inv_w[c], uvc,
+			tex);
 	}
 }
 int main()
@@ -268,9 +405,16 @@ int main()
 		return -1;
 	}
 	
+	Texture texture;
+	if (!texture.load("assets/spot_texture.png"))
+		return 1;
+
 	Mesh mesh;
 	if (!MeshLoader::loadMesh("assets/spot.obj", mesh))
 		return 1;
+
+
+
 
 	std::cout << "loaded: " << mesh.verts.size() << " vertices, "
 		<< mesh.faces.size() / 3 << " triangles\n";
@@ -295,7 +439,7 @@ int main()
 
 	// Camera: positioned 5 units back on +z (eye), aimed at the
 	// origin (target), with world-up being +y. See README section 5.10.
-	const Maths::Vec3S eye{ 0, 0, 10 };
+	const Maths::Vec3S eye{ 0, 0, 3 };
 	const Maths::Vec3S target{ 0, 0, 0 };
 	const Maths::Vec3S up{ 0, 1, 0 };
 	const Maths::Matrix4x4SIMD view = Maths::Matrix4x4SIMD::LookAt(eye, target, up);
@@ -320,7 +464,7 @@ int main()
 		clear(rgb(16, 16, 24));
 		clear_zbuffer();
 
-		drawMeshZ(mesh, mvp); //fonctions drawMesh adapter pour le Zbuffer et le remplissage des triangles
+		drawMeshTextured(mesh, mvp, texture);
 
 
 		glDrawPixels(WIDTH, HEIGHT, GL_RGBA, GL_UNSIGNED_BYTE, framebuffer);

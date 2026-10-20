@@ -136,10 +136,12 @@
     <ClCompile Include="EditorCore.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MeshRLoader.cpp" />
+    <ClCompile Include="Texture.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="EditorCore.h" />
     <ClInclude Include="MeshRLoader.h" />
+    <ClInclude Include="Texture.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

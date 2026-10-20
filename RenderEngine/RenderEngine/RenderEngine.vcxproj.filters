@@ -28,6 +28,12 @@
     <Filter Include="Headers\MeshRLoader">
       <UniqueIdentifier>{cae63105-9724-4010-95a0-6c915d2fdfff}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\TextureLoader">
+      <UniqueIdentifier>{3857b22d-ee6a-4a06-b8ff-f65f19ee7ed5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Headers\TextureLoader">
+      <UniqueIdentifier>{c7ea3562-44cf-47d5-8ec0-c2eafba0921f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -39,6 +45,9 @@
     <ClCompile Include="MeshRLoader.cpp">
       <Filter>src\MeshLoader</Filter>
     </ClCompile>
+    <ClCompile Include="Texture.cpp">
+      <Filter>src\TextureLoader</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="EditorCore.h">
@@ -46,6 +55,9 @@
     </ClInclude>
     <ClInclude Include="MeshRLoader.h">
       <Filter>Headers\MeshRLoader</Filter>
+    </ClInclude>
+    <ClInclude Include="Texture.h">
+      <Filter>Headers\TextureLoader</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
