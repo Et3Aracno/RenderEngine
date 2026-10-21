@@ -18,6 +18,7 @@
 #define CULL_BACKFACES true
 #define USE_ZBUFFER true
 #define PERSPECTIVE_CORRECT true
+#define AMBIENT 0.18f
 
 
 static uint32_t framebuffer[WIDTH * HEIGHT];
@@ -117,12 +118,8 @@ void drawTriangle(int x0, int y0, int x1, int y1, int Px, int Py, uint32_t color
 			if ((e0 | e1 | e2) >= 0) {// Comparateur binaire qui signifie que si l'un des 3 possède un bit à 1 donc négatif , if = false en revanche true si les bit des signe sont à 0 alors les pixel sont interne au triangle.
 				framebuffer[y * WIDTH + x] = color;
 			}
-
 		}
-
-
 	}
-
 }
 
 
@@ -343,13 +340,92 @@ static void drawMeshZ(const Mesh& mesh, const Maths::Matrix4x4SIMD& mvp)
 	}
 }
 
-static void drawMeshTextured(const Mesh& mesh, const Maths::Matrix4x4SIMD& mvp, const Texture& tex)
+// Scale an ARGB texel by a brightness in [0, 1], per channel.
+static inline uint32_t color_scale(uint32_t c, float k) {
+	if (k < 0.0f) k = 0.0f;
+	if (k > 1.0f) k = 1.0f;
+	uint32_t r = (uint32_t)((float)((c >> 16) & 0xFF) * k);
+	uint32_t g = (uint32_t)((float)((c >> 8) & 0xFF) * k);
+	uint32_t b = (uint32_t)((float)(c & 0xFF) * k);
+	return ((uint32_t)0xFFu << 24) | (r << 16) | (g << 8) | b;
+}
+
+// Per-triangle surface normal in MODEL space. Computed once at load:
+// the cross product of two edges is perpendicular to the triangle,
+// and we normalise it to unit length. The winding (chapter 8) makes
+// this point OUT of the front face.
+static void compute_face_normals(const Mesh* mesh, Maths::Vec3S* out) {
+	for (int f = 0; f < mesh->faces.size() / 3; f++) {
+		Maths::Vec3S v0 = mesh->verts[mesh->faces[f * 3 + 0]];
+		Maths::Vec3S v1 = mesh->verts[mesh->faces[f * 3 + 1]];
+		Maths::Vec3S v2 = mesh->verts[mesh->faces[f * 3 + 2]];
+		Maths::Vec3S e1 = v1 - v0;
+		Maths::Vec3S e2 = v2 - v0;
+		out[f] = (e1.Cross(e2)).Normalize();
+	}
+}
+
+// Textured + lit triangle: perspective-correct UV (chapter 9) plus a
+// single flat brightness multiplying every sampled texel.
+static void draw_triangle_lit(int x0, int y0, float z0, float iw0, Maths::Vec2S uv0,
+	int x1, int y1, float z1, float iw1, Maths::Vec2S uv1,
+	int x2, int y2, float z2, float iw2, Maths::Vec2S uv2,
+	const Texture* tex, float brightness) {
+	int area = edge(x0, y0, x1, y1, x2, y2);
+	if (area == 0) return;
+
+	if (area < 0) {
+		int tx = x1, ty = y1; float tz = z1, tiw = iw1; Maths::Vec2S tuv = uv1;
+		x1 = x2; y1 = y2; z1 = z2; iw1 = iw2; uv1 = uv2;
+		x2 = tx; y2 = ty; z2 = tz; iw2 = tiw; uv2 = tuv;
+		area = -area;
+	}
+
+	int minx = clampi(x0 < x1 ? (x0 < x2 ? x0 : x2) : (x1 < x2 ? x1 : x2), 0, WIDTH - 1);
+	int miny = clampi(y0 < y1 ? (y0 < y2 ? y0 : y2) : (y1 < y2 ? y1 : y2), 0, HEIGHT - 1);
+	int maxx = clampi(x0 > x1 ? (x0 > x2 ? x0 : x2) : (x1 > x2 ? x1 : x2), 0, WIDTH - 1);
+	int maxy = clampi(y0 > y1 ? (y0 > y2 ? y0 : y2) : (y1 > y2 ? y1 : y2), 0, HEIGHT - 1);
+
+	float inv_area = 1.0f / (float)area;
+	float u0w = uv0.x * iw0, v0w = uv0.y * iw0;
+	float u1w = uv1.x * iw1, v1w = uv1.y * iw1;
+	float u2w = uv2.x * iw2, v2w = uv2.y * iw2;
+
+	for (int y = miny; y <= maxy; y++) {
+		for (int x = minx; x <= maxx; x++) {
+			int e0 = edge(x1, y1, x2, y2, x, y);
+			int e1 = edge(x2, y2, x0, y0, x, y);
+			int e2 = edge(x0, y0, x1, y1, x, y);
+			if ((e0 | e1 | e2) < 0) continue;
+
+			float l0 = e0 * inv_area;
+			float l1 = e1 * inv_area;
+			float l2 = e2 * inv_area;
+
+			float z = l0 * z0 + l1 * z1 + l2 * z2;
+			int idx = y * WIDTH + x;
+			if (z >= zbuffer[idx]) continue;
+
+			float uw = l0 * u0w + l1 * u1w + l2 * u2w;
+			float vw = l0 * v0w + l1 * v1w + l2 * v2w;
+			float iw = l0 * iw0 + l1 * iw1 + l2 * iw2;
+			uint32_t texel = tex->sample(uw / iw, vw / iw);
+
+			zbuffer[idx] = z;
+			framebuffer[idx] = color_scale(texel, brightness);
+		}
+	}
+}
+
+static void drawMeshTextured(const Mesh& mesh, const Maths::Matrix4x4SIMD& mvp, Maths::Matrix4x4SIMD model,  const Texture& tex, Maths::Vec3S* face_normals)
 {
 	const int vcount = (int)mesh.verts.size();
 	const int tcount = (int)mesh.textures.size();
 	std::vector<int>   screen_x(vcount), screen_y(vcount);
 	std::vector<float> ndc_z(vcount), inv_w(vcount);
 	std::vector<char>  visible(vcount);
+
+	const Maths::Vec3S light = (Maths::Vec3S(0.4f, 0.8f, 0.45f)).Normalize();
 
 	for (int i = 0; i < vcount; i++) {
 		Maths::Vec4S clip = mvp * FromPoint(mesh.verts[i]);
@@ -367,36 +443,42 @@ static void drawMeshTextured(const Mesh& mesh, const Maths::Matrix4x4SIMD& mvp, 
 		visible[i] = true;
 	}
 
-	int drawn = 0, culled = 0;
-
-	for (size_t f = 0; f + 2 < mesh.faces.size(); f += 3) {
-		int a = mesh.faces[f + 0];
-		int b = mesh.faces[f + 1];
-		int c = mesh.faces[f + 2];
-
-		if (a < 0 || b < 0 || c < 0 || a >= vcount || b >= vcount || c >= vcount) continue;
+	for (int fidx = 0; fidx < mesh.faces.size() / 3; fidx++) {
+		int a = mesh.faces[fidx * 3 + 0];
+		int b = mesh.faces[fidx * 3 + 1];
+		int c = mesh.faces[fidx * 3 + 2];
 		if (!visible[a] || !visible[b] || !visible[c]) continue;
 
-		int area = edge(screen_x[a], screen_y[a], screen_x[b], screen_y[b], screen_x[c], screen_y[c]);
-#if CULL_BACKFACES
-		if (area <= 0) { culled++; continue; }
-#endif
-		drawn++;
+		if (edge(screen_x[a], screen_y[a], screen_x[b], screen_y[b], screen_x[c], screen_y[c]) <= 0) continue;  // cull
 
-		int ua = mesh.texFaces[f + 0];
-		int ub = mesh.texFaces[f + 1];
-		int uc = mesh.texFaces[f + 2];
+		// Lambert shading for this face. Rotate the normal into
+		// world space, then brightness = ambient + diffuse, where
+		// diffuse = max(0, N·L). The model matrix here is a pure
+		// rotation, so the normal stays unit length.
+		Maths::Vec3S n = model * face_normals[fidx];
+		float ndotl = n.Dot(light);
+		if (ndotl < 0.0f) ndotl = 0.0f;
+		float brightness = AMBIENT + (1.0f - AMBIENT) * ndotl;
 
-		Maths::Vec2S uva = (ua >= 0 && ua < tcount) ? mesh.textures[ua] : Maths::Vec2S(0, 0);
-		Maths::Vec2S uvb = (ub >= 0 && ub < tcount) ? mesh.textures[ub] : Maths::Vec2S(0, 0);
-		Maths::Vec2S uvc = (uc >= 0 && uc < tcount) ? mesh.textures[uc] : Maths::Vec2S(0, 0);
+		int ua = mesh.texFaces[fidx * 3 + 0];
+		int ub = mesh.texFaces[fidx * 3 + 1];
+		int uc = mesh.texFaces[fidx * 3 + 2];
+		Maths::Vec2S uva = (ua >= 0) ? mesh.textures[ua] : Maths::Vec2S(0, 0);
+		Maths::Vec2S uvb = (ub >= 0) ? mesh.textures[ub] : Maths::Vec2S(0, 0);
+		Maths::Vec2S uvc = (uc >= 0) ? mesh.textures[uc] : Maths::Vec2S(0, 0);
 
-		drawTriangle_Textured(screen_x[a], screen_y[a], ndc_z[a], inv_w[a], uva,
+		draw_triangle_lit(screen_x[a], screen_y[a], ndc_z[a], inv_w[a], uva,
 			screen_x[b], screen_y[b], ndc_z[b], inv_w[b], uvb,
 			screen_x[c], screen_y[c], ndc_z[c], inv_w[c], uvc,
-			tex);
+			&tex, brightness);
+
+
 	}
 }
+
+
+
+
 int main()
 {
 
@@ -413,7 +495,9 @@ int main()
 	if (!MeshLoader::loadMesh("assets/spot.obj", mesh))
 		return 1;
 
-
+	// One model-space normal per triangle, computed once.
+	Maths::Vec3S* face_normals = (Maths::Vec3S*)malloc(mesh.faces.size() * sizeof(Maths::Vec3S));
+	compute_face_normals(&mesh, face_normals);
 
 
 	std::cout << "loaded: " << mesh.verts.size() << " vertices, "
@@ -444,6 +528,12 @@ int main()
 	const Maths::Vec3S up{ 0, 1, 0 };
 	const Maths::Matrix4x4SIMD view = Maths::Matrix4x4SIMD::LookAt(eye, target, up);
 
+	// Directional light, fixed in WORLD space. L points FROM the
+	// surface TOWARD the light — here, up and a bit to the front-right,
+	// like a sun over your shoulder.
+
+
+
 	glfwMakeContextCurrent(window);
 	while (!glfwWindowShouldClose(window)) {
 		glfwPollEvents();
@@ -464,7 +554,9 @@ int main()
 		clear(rgb(16, 16, 24));
 		clear_zbuffer();
 
-		drawMeshTextured(mesh, mvp, texture);
+		
+
+		drawMeshTextured(mesh, mvp, model, texture, face_normals);
 
 
 		glDrawPixels(WIDTH, HEIGHT, GL_RGBA, GL_UNSIGNED_BYTE, framebuffer);

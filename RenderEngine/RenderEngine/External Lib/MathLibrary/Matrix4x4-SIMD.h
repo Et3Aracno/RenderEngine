@@ -51,6 +51,7 @@ namespace Maths
 
         static Matrix4x4SIMD Perspective(float fovYRadians, float aspect, float near, float far);
         static Matrix4x4SIMD LookAt(Vec3S eye, Vec3S target, Vec3S up);
+
     };
 }
 
