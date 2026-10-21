@@ -19,6 +19,7 @@
 #define USE_ZBUFFER true
 #define PERSPECTIVE_CORRECT true
 #define AMBIENT 0.18f
+#define SPEC_STRENGTH  0.55f   // 0 = no highlight, 1 = as bright as the light
 
 
 static uint32_t framebuffer[WIDTH * HEIGHT];
@@ -93,252 +94,17 @@ inline int edge(int x0, int y0, int x1 ,int y1, int Px, int Py)
 
 }
 
-void drawTriangle(int x0, int y0, int x1, int y1, int Px, int Py, uint32_t color) {
-
-	int area = edge(x0, y0, x1, y1, Px, Py);
-
-	if (area == 0)
-		return;
-
-	int minx = x0 < x1 ? (x0 < Px ? x0 : Px) : (x1 < Px ? x1 : Px);
-	int miny = y0 < y1 ? (y0 < Py ? y0 : Py) : (y1 < Py ? y1 : Py);
-	int maxx = x0 > x1 ? (x0 > Px ? x0 : Px) : (x1 > Px ? x1 : Px);
-	int maxy = y0 > y1 ? (y0 > Py ? y0 : Py) : (y1 > Py ? y1 : Py);
-	if (minx < 0) minx = 0;
-	if (miny < 0) miny = 0;
-	if (maxx >= WIDTH)  maxx = WIDTH - 1;
-	if (maxy >= HEIGHT) maxy = HEIGHT - 1;
-
-	for (int y = miny; y <= maxy; y++) {
-		for (int x = minx; x <= maxx; x++) {
-			int e0 = edge(x0, y0, x1, y1, x, y);
-			int e1 = edge(x1, y1, Px, Py, x, y);
-			int e2 = edge(Px, Py, x0, y0, x, y);
-
-			if ((e0 | e1 | e2) >= 0) {// Comparateur binaire qui signifie que si l'un des 3 possède un bit à 1 donc négatif , if = false en revanche true si les bit des signe sont à 0 alors les pixel sont interne au triangle.
-				framebuffer[y * WIDTH + x] = color;
-			}
-		}
-	}
-}
-
-
 static inline int clampi(int v, int lo, int hi) {
 	return v < lo ? lo : (v > hi ? hi : v);
 }
 
 
 
-void drawTriangle_z(int x0, int y0, float z0, int x1, int y1, float z1, int x2, int y2, float z2, float zmin, float zrange) 
-{
-	int area = edge(x0, y0, x1, y1, x2, y2);
-
-	if (area == 0)
-		return;
-	// Force one winding so "inside" means "all weights >= 0". We
-	// accept BOTH facing directions here (back faces are removed in
-	// chapter 8); the Z-buffer is what sorts them out for now, so we
-	// must be able to fill a triangle of either winding. Swapping
-	// vertices 1 and 2 flips a negative area positive — and the
-	// depth z1/z2 must ride along with their vertices.
-	if (area < 0) {
-		int   tx = x1; int ty = y1; float tz = z1;
-		x1 = x2; y1 = y2; z1 = z2;
-		x2 = tx; y2 = ty; z2 = tz;
-		area = -area;
-	}
-
-	// Bounding box, clamped to the screen.
-	int minx = clampi(x0 < x1 ? (x0 < x2 ? x0 : x2) : (x1 < x2 ? x1 : x2), 0, WIDTH - 1);
-	int miny = clampi(y0 < y1 ? (y0 < y2 ? y0 : y2) : (y1 < y2 ? y1 : y2), 0, HEIGHT - 1);
-	int maxx = clampi(x0 > x1 ? (x0 > x2 ? x0 : x2) : (x1 > x2 ? x1 : x2), 0, WIDTH - 1);
-	int maxy = clampi(y0 > y1 ? (y0 > y2 ? y0 : y2) : (y1 > y2 ? y1 : y2), 0, HEIGHT - 1);
-
-	float inv_area = 1.0f / (float)area;
-
-	for (int y = miny; y <= maxy; y++) {
-		for (int x = minx; x <= maxx; x++) {
-			int e0 = edge(x1, y1, x2, y2, x, y);
-			int e1 = edge(x2, y2, x0, y0, x, y);
-			int e2 = edge(x0, y0, x1, y1, x, y);
-			if ((e0 | e1 | e2) < 0) continue;   // outside the triangle
-
-			// Barycentric weights, normalised to sum to 1.
-			float l0 = e0 * inv_area;
-			float l1 = e1 * inv_area;
-			float l2 = e2 * inv_area;
-
-			// Interpolate depth. NDC z is an AFFINE function of the
-			// screen position, so plain screen-space barycentric
-			// interpolation is exactly correct for it — no
-			// perspective correction needed (that comes in chapter 9,
-			// for textures). Smaller z = nearer the camera.
-			float z = l0 * z0 + l1 * z1 + l2 * z2;
-
-			int idx = y * WIDTH + x;
-#if USE_ZBUFFER
-			if (z >= zbuffer[idx]) continue;    // something nearer is already here
-			zbuffer[idx] = z;
-#endif
-			// Shade by depth: map [zmin .. zmax] to bright .. dim.
-			float far01 = (z - zmin) / zrange;          // 0 near, 1 far
-			int level = 240 - (int)(far01 * 200.0f);    // 240 near .. 40 far
-			level = clampi(level, 0, 255);
-			framebuffer[idx] = rgb((uint8_t)level, (uint8_t)level, (uint8_t)level);
-		}
-	}
-
-
-
-
-}
-
-
-void drawTriangle_Textured(int x0, int y0, float z0, float iw0, Maths::Vec2S uv0, int x1, int y1, float z1, float iw1, Maths::Vec2S uv1, int x2, int y2, float z2, float iw2, Maths::Vec2S uv2, const Texture& tex)
-{
-	int area = edge(x0, y0, x1, y1, x2, y2);
-
-	if (area == 0)
-		return;
-
-
-	if (area < 0) {
-		int tx = x1, ty = y1;
-		float tz = z1, tiw = iw1;
-		Maths::Vec2S tuv = uv1;
-		x1 = x2; y1 = y2;
-		z1 = z2; iw1 = iw2;
-		uv1 = uv2;
-		x2 = tx;
-		y2 = ty;
-		z2 = tz; iw2 = tiw;
-		uv2 = tuv;
-		area = -area;
-	}
-
-
-	// Bounding box, clamped to the screen.
-	int minx = clampi(x0 < x1 ? (x0 < x2 ? x0 : x2) : (x1 < x2 ? x1 : x2), 0, WIDTH - 1);
-	int miny = clampi(y0 < y1 ? (y0 < y2 ? y0 : y2) : (y1 < y2 ? y1 : y2), 0, HEIGHT - 1);
-	int maxx = clampi(x0 > x1 ? (x0 > x2 ? x0 : x2) : (x1 > x2 ? x1 : x2), 0, WIDTH - 1);
-	int maxy = clampi(y0 > y1 ? (y0 > y2 ? y0 : y2) : (y1 > y2 ? y1 : y2), 0, HEIGHT - 1);
-
-	float inv_area = 1.0f / (float)area;
-
-	float u0w = uv0.x * iw0, v0w = uv0.y * iw0;
-	float u1w = uv1.x * iw1, v1w = uv1.y * iw1;
-	float u2w = uv2.x * iw2, v2w = uv2.y * iw2;
-
-
-	for (int y = miny; y <= maxy; y++) {
-		for (int x = minx; x <= maxx; x++) {
-			int e0 = edge(x1, y1, x2, y2, x, y);
-			int e1 = edge(x2, y2, x0, y0, x, y);
-			int e2 = edge(x0, y0, x1, y1, x, y);
-			if ((e0 | e1 | e2) < 0) continue;   // outside the triangle
-
-			// Barycentric weights, normalised to sum to 1.
-			float l0 = e0 * inv_area;
-			float l1 = e1 * inv_area;
-			float l2 = e2 * inv_area;
-
-			// Interpolate depth. z = depth of the pixel in ndc space
-			float z = l0 * z0 + l1 * z1 + l2 * z2;
-
-
-			int idx = y * WIDTH + x;
-			if (z >= zbuffer[idx]) continue;
-
-#if PERSPECTIVE_CORRECT
-			// Interpolate u/w, v/w, 1/w linearly, then divide back.
-			float uw = l0 * u0w + l1 * u1w + l2 * u2w;
-			float vw = l0 * v0w + l1 * v1w + l2 * v2w;
-			float iw = l0 * iw0 + l1 * iw1 + l2 * iw2;
-			float u = uw / iw;
-			float v = vw / iw;
-#else
-			// Naive: interpolate u, v directly in screen space. Wrong
-			// under perspective — the texture visibly warps.
-			float u = l0 * uv0.x + l1 * uv1.x + l2 * uv2.x;
-			float v = l0 * uv0.y + l1 * uv1.y + l2 * uv2.y;
-
-
-#endif
-			zbuffer[idx] = z;
-			framebuffer[idx] = tex.sample(u, v);
-		}
-	}
-}
-
 // Promote a 3D point to a 4D homogeneous point (w = 1).
 static inline Maths::Vec4S FromPoint(Maths::Vec3S p) {
 	Maths::Vec4S v = { p.x, p.y, p.z, 1.0f };
 	return v;
 } 
-
-static void drawMeshZ(const Mesh& mesh, const Maths::Matrix4x4SIMD& mvp)
-{
-	const int vcount = (int)mesh.verts.size();
-	std::vector<int>   screen_x(vcount), screen_y(vcount);
-	std::vector<float> ndc_z(vcount);
-	std::vector<char>  visible(vcount);
-
-	
-	float zmin = std::numeric_limits<float>::min(),
-
-		  zmax = std::numeric_limits<float>::max();
-
-	for (int i = 0; i < vcount; i++) {
-		Maths::Vec4S clip = mvp * FromPoint(mesh.verts[i]);
-
-		if (clip.w <= 0.0001f) { visible[i] = false; continue; }
-
-		float ndc_x = clip.x / clip.w;
-		float ndc_y = clip.y / clip.w;
-		float nz = clip.z / clip.w;
-
-		screen_x[i] = (int)((ndc_x + 1.0f) * 0.5f * WIDTH);
-		screen_y[i] = (int)(( ndc_y + 1.0f) * 0.5f * HEIGHT);
-		ndc_z[i] = nz;
-		visible[i] = true;
-
-		if (nz < zmin) zmin = nz;
-		if (nz > zmax) zmax = nz;
-	}
-	float zrange = (zmax > zmin) ? (zmax - zmin) : 1.0f;
-
-	int drawn = 0, culled = 0;
-
-	for (size_t f = 0; f + 2 < mesh.faces.size(); f += 3) {
-		int a = mesh.faces[f + 0];
-		int b = mesh.faces[f + 1];
-		int c = mesh.faces[f + 2];
-
-		if (a < 0 || b < 0 || c < 0 || a >= vcount || b >= vcount || c >= vcount) continue; // en dehors du tb 
-		if (!visible[a] || !visible[b] || !visible[c]) continue; // derriere la cam
-
-		// Backface culling. The screen-space signed area tells us
-		// the triangle's winding. Because the viewport flips y,
-		// a FRONT-facing triangle comes out with a NEGATIVE area;
-		// a back-facing one is positive (and zero is edge-on /
-		// degenerate). So we keep only area < 0.
-		int area = edge(screen_x[a], screen_y[a], screen_x[b], screen_y[b], screen_x[c], screen_y[c]);
-
-#if CULL_BACKFACES
-		if (area >= 0) { culled++; continue; }
-#endif
-		(void)area;
-		drawn++;
-
-		int ua = mesh.texFaces[f * 3 + 0];
-		int ub = mesh.texFaces[f * 3 + 1];
-		int uc = mesh.texFaces[f * 3 + 2];
-		drawTriangle_z(screen_x[a], screen_y[a], ndc_z[a],
-			screen_x[b], screen_y[b], ndc_z[b],
-			screen_x[c], screen_y[c], ndc_z[c],
-			zmin, zrange);
-	}
-}
 
 // Scale an ARGB texel by a brightness in [0, 1], per channel.
 static inline uint32_t color_scale(uint32_t c, float k) {
@@ -417,6 +183,96 @@ static void draw_triangle_lit(int x0, int y0, float z0, float iw0, Maths::Vec2S 
 	}
 }
 
+// Combine a texel with diffuse shading and a white specular add.
+// diffuse_k multiplies the texel; spec_k adds white·spec_k. Clamped.
+static inline uint32_t color_phong(uint32_t texel, float diffuse_k, float spec_k) {
+	float r = (float)((texel >> 16) & 0xFF) * diffuse_k + 255.0f * spec_k;
+	float g = (float)((texel >> 8) & 0xFF) * diffuse_k + 255.0f * spec_k;
+	float b = (float)(texel & 0xFF) * diffuse_k + 255.0f * spec_k;
+	if (r > 255.0f) r = 255.0f;
+	if (g > 255.0f) g = 255.0f;
+	if (b > 255.0f) b = 255.0f;
+	return ((uint32_t)0xFFu << 24)
+		| ((uint32_t)r << 16) | ((uint32_t)g << 8) | (uint32_t)b;
+}
+
+// Phong-shaded textured triangle: per-vertex world-space normals
+// interpolated perspective-correctly, re-normalised per pixel, then
+// Lambert diffuse + Blinn-Phong specular evaluated per pixel.
+static void draw_triangle_phong(
+	int x0, int y0, float z0, float iw0, Maths::Vec2S uv0, Maths::Vec3S n0,
+	int x1, int y1, float z1, float iw1, Maths::Vec2S uv1, Maths::Vec3S n1,
+	int x2, int y2, float z2, float iw2, Maths::Vec2S uv2, Maths::Vec3S n2,
+	const Texture* tex, Maths::Vec3S L, Maths::Vec3S H) {
+	int area = edge(x0, y0, x1, y1, x2, y2);
+	if (area == 0) return;
+
+	if (area < 0) {
+		int   tx = x1, ty = y1; float tz = z1, tiw = iw1; Maths::Vec2S tuv = uv1; Maths::Vec3S	 tn = n1;
+		x1 = x2; y1 = y2; z1 = z2; iw1 = iw2; uv1 = uv2; n1 = n2;
+		x2 = tx; y2 = ty; z2 = tz; iw2 = tiw; uv2 = tuv; n2 = tn;
+		area = -area;
+	}
+
+	int minx = clampi(x0 < x1 ? (x0 < x2 ? x0 : x2) : (x1 < x2 ? x1 : x2), 0, WIDTH - 1);
+	int miny = clampi(y0 < y1 ? (y0 < y2 ? y0 : y2) : (y1 < y2 ? y1 : y2), 0, HEIGHT - 1);
+	int maxx = clampi(x0 > x1 ? (x0 > x2 ? x0 : x2) : (x1 > x2 ? x1 : x2), 0, WIDTH - 1);
+	int maxy = clampi(y0 > y1 ? (y0 > y2 ? y0 : y2) : (y1 > y2 ? y1 : y2), 0, HEIGHT - 1);
+
+	float inv_area = 1.0f / (float)area;
+
+	// Pre-divide every perspective-interpolated attribute by w.
+	float u0w = uv0.x * iw0, v0w = uv0.y * iw0;
+	float u1w = uv1.x * iw1, v1w = uv1.y * iw1;
+	float u2w = uv2.x * iw2, v2w = uv2.y * iw2;
+	Maths::Vec3S n0w = n0 * iw0;
+	Maths::Vec3S n1w = n1 * iw1;
+	Maths::Vec3S n2w = n2 * iw2;
+
+	for (int y = miny; y <= maxy; y++) {
+		for (int x = minx; x <= maxx; x++) {
+			int e0 = edge(x1, y1, x2, y2, x, y);
+			int e1 = edge(x2, y2, x0, y0, x, y);
+			int e2 = edge(x0, y0, x1, y1, x, y);
+			if ((e0 | e1 | e2) < 0) continue;
+
+			float l0 = e0 * inv_area;
+			float l1 = e1 * inv_area;
+			float l2 = e2 * inv_area;
+
+			float z = l0 * z0 + l1 * z1 + l2 * z2;
+			int idx = y * WIDTH + x;
+			if (z >= zbuffer[idx]) continue;
+
+			float iw = l0 * iw0 + l1 * iw1 + l2 * iw2;
+			float inv_iw = 1.0f / iw;
+
+			float u = (l0 * u0w + l1 * u1w + l2 * u2w) * inv_iw;
+			float v = (l0 * v0w + l1 * v1w + l2 * v2w) * inv_iw;
+
+			// Perspective-correct interpolated normal, then re-normalise:
+			// averaging unit vectors gives a non-unit result.
+			Maths::Vec3S N = Maths::Vec3S((l0 * n0w.x + l1 * n1w.x + l2 * n2w.x) * inv_iw,
+				(l0 * n0w.y + l1 * n1w.y + l2 * n2w.y) * inv_iw,
+				(l0 * n0w.z + l1 * n1w.z + l2 * n2w.z) * inv_iw);
+			N = N.Normalize();
+
+			float ndotl = N.Dot(L);
+			if (ndotl < 0.0f) ndotl = 0.0f;
+			float diffuse_k = AMBIENT + (1.0f - AMBIENT) * ndotl;
+
+			float ndoth = N.Dot(H);
+			if (ndoth < 0.0f) ndoth = 0.0f;
+			float spec_k = std::powf(ndoth, 32) * SPEC_STRENGTH;
+
+			uint32_t texel = tex->sample(u, v);
+			zbuffer[idx] = z;
+			framebuffer[idx] = color_phong(texel, diffuse_k, spec_k);
+		}
+	}
+}
+
+
 static void drawMeshTextured(const Mesh& mesh, const Maths::Matrix4x4SIMD& mvp, Maths::Matrix4x4SIMD model,  const Texture& tex, Maths::Vec3S* face_normals)
 {
 	const int vcount = (int)mesh.verts.size();
@@ -426,6 +282,10 @@ static void drawMeshTextured(const Mesh& mesh, const Maths::Matrix4x4SIMD& mvp, 
 	std::vector<char>  visible(vcount);
 
 	const Maths::Vec3S light = (Maths::Vec3S(0.4f, 0.8f, 0.45f)).Normalize();
+
+	const Maths::Vec3S view_dir = Maths::Vec3S(0, 0, 1);
+	const Maths::Vec3S half_vec = (light, view_dir).Normalize();
+	Maths::Vec3S* normal_world = (Maths::Vec3S*)malloc(mesh.verts.size() * sizeof(Maths::Vec3S));
 
 	for (int i = 0; i < vcount; i++) {
 		Maths::Vec4S clip = mvp * FromPoint(mesh.verts[i]);
@@ -467,16 +327,31 @@ static void drawMeshTextured(const Mesh& mesh, const Maths::Matrix4x4SIMD& mvp, 
 		Maths::Vec2S uvb = (ub >= 0) ? mesh.textures[ub] : Maths::Vec2S(0, 0);
 		Maths::Vec2S uvc = (uc >= 0) ? mesh.textures[uc] : Maths::Vec2S(0, 0);
 
-		draw_triangle_lit(screen_x[a], screen_y[a], ndc_z[a], inv_w[a], uva,
-			screen_x[b], screen_y[b], ndc_z[b], inv_w[b], uvb,
-			screen_x[c], screen_y[c], ndc_z[c], inv_w[c], uvc,
-			&tex, brightness);
+		draw_triangle_phong(screen_x[a], screen_y[a], ndc_z[a], inv_w[a], uva, normal_world[a],
+			screen_x[b], screen_y[b], ndc_z[b], inv_w[b], uvb, normal_world[b],
+			screen_x[c], screen_y[c], ndc_z[c], inv_w[c], uvc, normal_world[c],
+			&tex, light, half_vec);
 
 
 	}
 }
 
 
+// One model-space normal per VERTEX: sum the normals of every
+// triangle touching the vertex, then normalise. Unweighted average —
+// good for a cleanly-modelled closed mesh like Spot. This is what
+// makes the shading smooth: neighbouring triangles share vertex
+// normals, so the interpolated normal flows continuously across edges.
+static void compute_vertex_normals(const Mesh* mesh, const Maths::Vec3S* face_normals, Maths::Vec3S* out) {
+	for (int i = 0; i < mesh->verts.size(); i++) out[i] = Maths::Vec3S(0, 0, 0);
+	for (int f = 0; f < mesh->faces.size() / 3; f++) {
+		for (int k = 0; k < 3; k++) {
+			int v = mesh->faces[f * 3 + k];
+			out[v] = out[v] + face_normals[f];
+		}
+	}
+	for (int i = 0; i < mesh->verts.size(); i++) out[i] = out[i].Normalize();
+}
 
 
 int main()
@@ -497,7 +372,9 @@ int main()
 
 	// One model-space normal per triangle, computed once.
 	Maths::Vec3S* face_normals = (Maths::Vec3S*)malloc(mesh.faces.size() * sizeof(Maths::Vec3S));
+	Maths::Vec3S* vertex_normals = (Maths::Vec3S*)malloc(mesh.verts.size() * sizeof(Maths::Vec3S));
 	compute_face_normals(&mesh, face_normals);
+	compute_vertex_normals(&mesh, face_normals, vertex_normals);
 
 
 	std::cout << "loaded: " << mesh.verts.size() << " vertices, "
