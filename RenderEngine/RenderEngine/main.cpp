@@ -131,57 +131,24 @@ static void compute_face_normals(const Mesh* mesh, Maths::Vec3S* out) {
 	}
 }
 
-// Textured + lit triangle: perspective-correct UV (chapter 9) plus a
-// single flat brightness multiplying every sampled texel.
-static void draw_triangle_lit(int x0, int y0, float z0, float iw0, Maths::Vec2S uv0,
-	int x1, int y1, float z1, float iw1, Maths::Vec2S uv1,
-	int x2, int y2, float z2, float iw2, Maths::Vec2S uv2,
-	const Texture* tex, float brightness) {
-	int area = edge(x0, y0, x1, y1, x2, y2);
-	if (area == 0) return;
 
-	if (area < 0) {
-		int tx = x1, ty = y1; float tz = z1, tiw = iw1; Maths::Vec2S tuv = uv1;
-		x1 = x2; y1 = y2; z1 = z2; iw1 = iw2; uv1 = uv2;
-		x2 = tx; y2 = ty; z2 = tz; iw2 = tiw; uv2 = tuv;
-		area = -area;
-	}
 
-	int minx = clampi(x0 < x1 ? (x0 < x2 ? x0 : x2) : (x1 < x2 ? x1 : x2), 0, WIDTH - 1);
-	int miny = clampi(y0 < y1 ? (y0 < y2 ? y0 : y2) : (y1 < y2 ? y1 : y2), 0, HEIGHT - 1);
-	int maxx = clampi(x0 > x1 ? (x0 > x2 ? x0 : x2) : (x1 > x2 ? x1 : x2), 0, WIDTH - 1);
-	int maxy = clampi(y0 > y1 ? (y0 > y2 ? y0 : y2) : (y1 > y2 ? y1 : y2), 0, HEIGHT - 1);
-
-	float inv_area = 1.0f / (float)area;
-	float u0w = uv0.x * iw0, v0w = uv0.y * iw0;
-	float u1w = uv1.x * iw1, v1w = uv1.y * iw1;
-	float u2w = uv2.x * iw2, v2w = uv2.y * iw2;
-
-	for (int y = miny; y <= maxy; y++) {
-		for (int x = minx; x <= maxx; x++) {
-			int e0 = edge(x1, y1, x2, y2, x, y);
-			int e1 = edge(x2, y2, x0, y0, x, y);
-			int e2 = edge(x0, y0, x1, y1, x, y);
-			if ((e0 | e1 | e2) < 0) continue;
-
-			float l0 = e0 * inv_area;
-			float l1 = e1 * inv_area;
-			float l2 = e2 * inv_area;
-
-			float z = l0 * z0 + l1 * z1 + l2 * z2;
-			int idx = y * WIDTH + x;
-			if (z >= zbuffer[idx]) continue;
-
-			float uw = l0 * u0w + l1 * u1w + l2 * u2w;
-			float vw = l0 * v0w + l1 * v1w + l2 * v2w;
-			float iw = l0 * iw0 + l1 * iw1 + l2 * iw2;
-			uint32_t texel = tex->sample(uw / iw, vw / iw);
-
-			zbuffer[idx] = z;
-			framebuffer[idx] = color_scale(texel, brightness);
+// One model-space normal per VERTEX: sum the normals of every
+// triangle touching the vertex, then normalise. Unweighted average —
+// good for a cleanly-modelled closed mesh like Spot. This is what
+// makes the shading smooth: neighbouring triangles share vertex
+// normals, so the interpolated normal flows continuously across edges.
+static void compute_vertex_normals(const Mesh* mesh, const Maths::Vec3S* face_normals, Maths::Vec3S* out) {
+	for (int i = 0; i < mesh->verts.size(); i++) out[i] = Maths::Vec3S(0, 0, 0);
+	for (int f = 0; f < mesh->faces.size() / 3; f++) {
+		for (int k = 0; k < 3 ; k++) {
+			int v = mesh->faces[f * 3+ k];
+			out[v] = out[v] + face_normals[f];
 		}
 	}
+	for (int i = 0; i < mesh->verts.size() ; i++) out[i] = out[i].Normalize();
 }
+
 
 // Combine a texel with diffuse shading and a white specular add.
 // diffuse_k multiplies the texel; spec_k adds white·spec_k. Clamped.
@@ -273,7 +240,7 @@ static void draw_triangle_phong(
 }
 
 
-static void drawMeshTextured(const Mesh& mesh, const Maths::Matrix4x4SIMD& mvp, Maths::Matrix4x4SIMD model,  const Texture& tex, Maths::Vec3S* face_normals)
+static void drawMeshTextured(const Mesh& mesh, const Maths::Matrix4x4SIMD& mvp, Maths::Matrix4x4SIMD model,  const Texture& tex, Maths::Vec3S* face_normals, Maths::Vec3S* vertex_normals)
 {
 	const int vcount = (int)mesh.verts.size();
 	const int tcount = (int)mesh.textures.size();
@@ -282,9 +249,8 @@ static void drawMeshTextured(const Mesh& mesh, const Maths::Matrix4x4SIMD& mvp, 
 	std::vector<char>  visible(vcount);
 
 	const Maths::Vec3S light = (Maths::Vec3S(0.4f, 0.8f, 0.45f)).Normalize();
-
 	const Maths::Vec3S view_dir = Maths::Vec3S(0, 0, 1);
-	const Maths::Vec3S half_vec = (light, view_dir).Normalize();
+	const Maths::Vec3S half_vec = (light + view_dir).Normalize();
 	Maths::Vec3S* normal_world = (Maths::Vec3S*)malloc(mesh.verts.size() * sizeof(Maths::Vec3S));
 
 	for (int i = 0; i < vcount; i++) {
@@ -300,6 +266,7 @@ static void drawMeshTextured(const Mesh& mesh, const Maths::Matrix4x4SIMD& mvp, 
 		screen_y[i] = (int)((ndc_y + 1.0f) * 0.5f * HEIGHT);
 		ndc_z[i] = clip.z * inv;
 		inv_w[i] = inv;
+		normal_world[i] = model * vertex_normals[i];
 		visible[i] = true;
 	}
 
@@ -334,23 +301,6 @@ static void drawMeshTextured(const Mesh& mesh, const Maths::Matrix4x4SIMD& mvp, 
 
 
 	}
-}
-
-
-// One model-space normal per VERTEX: sum the normals of every
-// triangle touching the vertex, then normalise. Unweighted average —
-// good for a cleanly-modelled closed mesh like Spot. This is what
-// makes the shading smooth: neighbouring triangles share vertex
-// normals, so the interpolated normal flows continuously across edges.
-static void compute_vertex_normals(const Mesh* mesh, const Maths::Vec3S* face_normals, Maths::Vec3S* out) {
-	for (int i = 0; i < mesh->verts.size(); i++) out[i] = Maths::Vec3S(0, 0, 0);
-	for (int f = 0; f < mesh->faces.size() / 3; f++) {
-		for (int k = 0; k < 3; k++) {
-			int v = mesh->faces[f * 3 + k];
-			out[v] = out[v] + face_normals[f];
-		}
-	}
-	for (int i = 0; i < mesh->verts.size(); i++) out[i] = out[i].Normalize();
 }
 
 
@@ -433,7 +383,7 @@ int main()
 
 		
 
-		drawMeshTextured(mesh, mvp, model, texture, face_normals);
+		drawMeshTextured(mesh, mvp, model, texture, face_normals, vertex_normals);
 
 
 		glDrawPixels(WIDTH, HEIGHT, GL_RGBA, GL_UNSIGNED_BYTE, framebuffer);
