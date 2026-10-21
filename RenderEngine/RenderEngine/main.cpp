@@ -366,34 +366,41 @@ int main()
 	// like a sun over your shoulder.
 
 
-
 	glfwMakeContextCurrent(window);
+
+	float lastTime = glfwGetTime();
+	int frameCount = 0;
+
 	while (!glfwWindowShouldClose(window)) {
 		glfwPollEvents();
 
-
-		
 		double seconds = (double)(glfwGetTimerValue() - start) / (double)freq;		//tick / frequence  = temps en seconde					
 		float angle = (float)seconds;   // 1 radian par seconde
-
-
-
 
 		Maths::Matrix4x4SIMD model = Maths::Matrix4x4SIMD::RotationY(angle * 0.7f);
 		Maths::Matrix4x4SIMD mvp = projection * view * model;
 
-
-
 		clear(rgb(16, 16, 24));
 		clear_zbuffer();
 
-		
-
 		drawMeshTextured(mesh, mvp, model, texture, face_normals, vertex_normals);
-
 
 		glDrawPixels(WIDTH, HEIGHT, GL_RGBA, GL_UNSIGNED_BYTE, framebuffer);
 		glfwSwapBuffers(window);
+
+		float currentTime = glfwGetTime();
+		frameCount++;
+
+		if(currentTime - lastTime >= 1){
+			double fps = frameCount / (currentTime - lastTime);
+
+			char title[256];
+			snprintf(title, sizeof(title), "FPS Counter [%.1f FPS]", fps);
+			glfwSetWindowTitle(window, title);
+
+			frameCount = 0;	
+			lastTime = currentTime;
+		}
 	}
 	glfwDestroyWindow(window);
 	glfwTerminate();
