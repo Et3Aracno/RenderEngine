@@ -10,6 +10,7 @@
 #include "External Lib/MathLibrary/MathLib.h"
 #include "MeshRLoader.h"
 #include "Texture.h"
+#include "clip.h"
 
 #define WIDTH  800
 #define HEIGHT 600
@@ -18,6 +19,7 @@
 #define CULL_BACKFACES true
 #define USE_ZBUFFER true
 #define PERSPECTIVE_CORRECT true
+#define BILINEAR true   // false = plus proche voisin (blocs visibles de près)
 #define AMBIENT 0.18f
 #define SPEC_STRENGTH  0.55f   // 0 = no highlight, 1 = as bright as the light
 
@@ -163,6 +165,9 @@ static inline uint32_t color_phong(uint32_t texel, float diffuse_k, float spec_k
 		| ((uint32_t)r << 16) | ((uint32_t)g << 8) | (uint32_t)b;
 }
 
+
+
+
 // Phong-shaded textured triangle: per-vertex world-space normals
 // interpolated perspective-correctly, re-normalised per pixel, then
 // Lambert diffuse + Blinn-Phong specular evaluated per pixel.
@@ -232,74 +237,75 @@ static void draw_triangle_phong(
 			if (ndoth < 0.0f) ndoth = 0.0f;
 			float spec_k = std::powf(ndoth, 32) * SPEC_STRENGTH;
 
+#if BILINEAR
+			uint32_t texel = tex->sampleBilinear(u, v);
+#else
 			uint32_t texel = tex->sample(u, v);
+#endif
 			zbuffer[idx] = z;
 			framebuffer[idx] = color_phong(texel, diffuse_k, spec_k);
 		}
 	}
+}
+static void projectAndDraw(const ClipVertex* tri, const Texture* tex,
+	Maths::Vec3S L, Maths::Vec3S H) {
+	int   sx[3], sy[3];
+	float ndcZ[3], invW[3];
+	for (int k = 0; k < 3; k++) {
+		float inv = 1.0f / tri[k].clip.w;
+		sx[k] = (int)((tri[k].clip.x * inv + 1.0f) * 0.5f * WIDTH);
+		sy[k] = (int)((tri[k].clip.y * inv + 1.0f) * 0.5f * HEIGHT);  // ton Y n'est pas inversé
+		ndcZ[k] = tri[k].clip.z * inv;
+		invW[k] = inv;
+	}
+
+	if (edge(sx[0], sy[0], sx[1], sy[1], sx[2], sy[2]) <= 0) return;  // cull (ton sens actuel)
+
+	draw_triangle_phong(sx[0], sy[0], ndcZ[0], invW[0], tri[0].uv, tri[0].normal,
+		sx[1], sy[1], ndcZ[1], invW[1], tri[1].uv, tri[1].normal,
+		sx[2], sy[2], ndcZ[2], invW[2], tri[2].uv, tri[2].normal,
+		tex, L, H);
 }
 
 
 static void drawMeshTextured(const Mesh& mesh, const Maths::Matrix4x4SIMD& mvp, Maths::Matrix4x4SIMD model,  const Texture& tex, Maths::Vec3S* face_normals, Maths::Vec3S* vertex_normals)
 {
 	const int vcount = (int)mesh.verts.size();
-	const int tcount = (int)mesh.textures.size();
-	std::vector<int>   screen_x(vcount), screen_y(vcount);
-	std::vector<float> ndc_z(vcount), inv_w(vcount);
-	std::vector<char>  visible(vcount);
 
 	const Maths::Vec3S light = (Maths::Vec3S(0.4f, 0.8f, 0.45f)).Normalize();
 	const Maths::Vec3S view_dir = Maths::Vec3S(0, 0, 1);
 	const Maths::Vec3S half_vec = (light + view_dir).Normalize();
-	Maths::Vec3S* normal_world = (Maths::Vec3S*)malloc(mesh.verts.size() * sizeof(Maths::Vec3S));
 
+	// Étape 1 : par sommet du mesh -> clip space seulement (PAS de division par w)
+	std::vector<Maths::Vec4S> clipV(vcount);
+	std::vector<Maths::Vec3S> normalWorld(vcount);
 	for (int i = 0; i < vcount; i++) {
-		Maths::Vec4S clip = mvp * FromPoint(mesh.verts[i]);
-
-		if (clip.w <= 0.0001f) { visible[i] = false; continue; }
-
-		float inv = 1.0f / clip.w;
-		float ndc_x = clip.x * inv;
-		float ndc_y = clip.y * inv;
-
-		screen_x[i] = (int)((ndc_x + 1.0f) * 0.5f * WIDTH);
-		screen_y[i] = (int)((ndc_y + 1.0f) * 0.5f * HEIGHT);
-		ndc_z[i] = clip.z * inv;
-		inv_w[i] = inv;
-		normal_world[i] = model * vertex_normals[i];
-		visible[i] = true;
+		clipV[i] = mvp * FromPoint(mesh.verts[i]);
+		normalWorld[i] = model * vertex_normals[i];
 	}
 
-	for (int fidx = 0; fidx < mesh.faces.size() / 3; fidx++) {
+	// Étape 2 : par triangle -> clipping, puis projection + dessin
+	for (int fidx = 0; fidx < (int)mesh.faces.size() / 3; fidx++) {
 		int a = mesh.faces[fidx * 3 + 0];
 		int b = mesh.faces[fidx * 3 + 1];
 		int c = mesh.faces[fidx * 3 + 2];
-		if (!visible[a] || !visible[b] || !visible[c]) continue;
-
-		if (edge(screen_x[a], screen_y[a], screen_x[b], screen_y[b], screen_x[c], screen_y[c]) <= 0) continue;  // cull
-
-		// Lambert shading for this face. Rotate the normal into
-		// world space, then brightness = ambient + diffuse, where
-		// diffuse = max(0, N·L). The model matrix here is a pure
-		// rotation, so the normal stays unit length.
-		Maths::Vec3S n = model * face_normals[fidx];
-		float ndotl = n.Dot(light);
-		if (ndotl < 0.0f) ndotl = 0.0f;
-		float brightness = AMBIENT + (1.0f - AMBIENT) * ndotl;
 
 		int ua = mesh.texFaces[fidx * 3 + 0];
 		int ub = mesh.texFaces[fidx * 3 + 1];
 		int uc = mesh.texFaces[fidx * 3 + 2];
-		Maths::Vec2S uva = (ua >= 0) ? mesh.textures[ua] : Maths::Vec2S(0, 0);
-		Maths::Vec2S uvb = (ub >= 0) ? mesh.textures[ub] : Maths::Vec2S(0, 0);
-		Maths::Vec2S uvc = (uc >= 0) ? mesh.textures[uc] : Maths::Vec2S(0, 0);
 
-		draw_triangle_phong(screen_x[a], screen_y[a], ndc_z[a], inv_w[a], uva, normal_world[a],
-			screen_x[b], screen_y[b], ndc_z[b], inv_w[b], uvb, normal_world[b],
-			screen_x[c], screen_y[c], ndc_z[c], inv_w[c], uvc, normal_world[c],
-			&tex, light, half_vec);
+		ClipVertex v0, v1, v2;
+		v0.clip = clipV[a]; v0.normal = normalWorld[a]; v0.uv = (ua >= 0) ? mesh.textures[ua] : Maths::Vec2S(0, 0);
+		v1.clip = clipV[b]; v1.normal = normalWorld[b]; v1.uv = (ub >= 0) ? mesh.textures[ub] : Maths::Vec2S(0, 0);
+		v2.clip = clipV[c]; v2.normal = normalWorld[c]; v2.uv = (uc >= 0) ? mesh.textures[uc] : Maths::Vec2S(0, 0);
 
+		// Clip contre le plan near -> 0, 1 ou 2 triangles
+		ClipVertex out[6];
+		int nTris;
+		ClipTriangleNear(v0, v1, v2, out, &nTris);
 
+		for (int t = 0; t < nTris; t++)
+			projectAndDraw(&out[t * 3], &tex, light, half_vec);
 	}
 }
 

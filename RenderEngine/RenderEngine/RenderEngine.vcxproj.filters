@@ -34,6 +34,12 @@
     <Filter Include="Headers\TextureLoader">
       <UniqueIdentifier>{c7ea3562-44cf-47d5-8ec0-c2eafba0921f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\Clip">
+      <UniqueIdentifier>{e3eb2243-305c-4651-a956-9c606efe17b9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Headers\Clip">
+      <UniqueIdentifier>{50f2da1c-ea84-49bb-a878-8d4548ebb23e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -58,6 +64,9 @@
     </ClInclude>
     <ClInclude Include="Texture.h">
       <Filter>Headers\TextureLoader</Filter>
+    </ClInclude>
+    <ClInclude Include="clip.h">
+      <Filter>Headers\Clip</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

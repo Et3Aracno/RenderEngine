@@ -14,4 +14,5 @@ struct Texture
 
 	// pixel ARGB pour que open gl puisse l'utiliser directement
     uint32_t sample(float u, float v) const;
+    uint32_t sampleBilinear(float u, float v) const;
 };

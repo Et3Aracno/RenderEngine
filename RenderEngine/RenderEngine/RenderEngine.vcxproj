@@ -139,6 +139,7 @@
     <ClCompile Include="Texture.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="clip.h" />
     <ClInclude Include="EditorCore.h" />
     <ClInclude Include="MeshRLoader.h" />
     <ClInclude Include="Texture.h" />

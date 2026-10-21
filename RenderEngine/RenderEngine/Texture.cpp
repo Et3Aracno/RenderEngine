@@ -71,3 +71,51 @@ uint32_t Texture::sample(float u, float v) const
 
     return pixels[(size_t)y * width + x];
 }
+
+
+uint32_t Texture::sampleBilinear(float u, float v) const
+{
+    if (pixels.empty()) return 0xFFFF00FF;   // magenta = texture absente
+
+    // Wrap + flip de V, comme dans sample()
+    u -= std::floor(u);
+    v -= std::floor(v);
+
+    // Position en coordonnées texel. Le -0.5 décale vers les CENTRES des texels :
+    // sans ça, l'image serait décalée d'un demi-texel.
+    float fx = u * (float)width - 0.5f;
+    float fy = (1.0f - v) * (float)height - 0.5f;
+
+    int x0 = (int)std::floor(fx);
+    int y0 = (int)std::floor(fy);
+    float tx = fx - (float)x0;   // partie fractionnaire = poids horizontal
+    float ty = fy - (float)y0;   // partie fractionnaire = poids vertical
+
+    // Les 4 texels voisins, avec wrap aux bords
+    auto wrap = [](int i, int n) { return ((i % n) + n) % n; };
+    int xa = wrap(x0, width), xb = wrap(x0 + 1, width);
+    int ya = wrap(y0, height), yb = wrap(y0 + 1, height);
+
+    uint32_t c00 = pixels[(size_t)ya * width + xa];
+    uint32_t c10 = pixels[(size_t)ya * width + xb];
+    uint32_t c01 = pixels[(size_t)yb * width + xa];
+    uint32_t c11 = pixels[(size_t)yb * width + xb];
+
+    // Les 4 poids (leur somme vaut 1)
+    float w00 = (1.0f - tx) * (1.0f - ty);
+    float w10 = tx * (1.0f - ty);
+    float w01 = (1.0f - tx) * ty;
+    float w11 = tx * ty;
+
+    // Mélange chaque canal (octet) séparément
+    uint32_t result = 0;
+    for (int shift = 0; shift <= 24; shift += 8)
+    {
+        float ch = (float)((c00 >> shift) & 0xFF) * w00
+            + (float)((c10 >> shift) & 0xFF) * w10
+            + (float)((c01 >> shift) & 0xFF) * w01
+            + (float)((c11 >> shift) & 0xFF) * w11;
+        result |= ((uint32_t)(ch + 0.5f) & 0xFF) << shift;
+    }
+    return result;
+}
