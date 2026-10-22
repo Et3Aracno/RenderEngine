@@ -54,6 +54,12 @@
     <ClCompile Include="Texture.cpp">
       <Filter>src\TextureLoader</Filter>
     </ClCompile>
+    <ClCompile Include="Material.cpp">
+      <Filter>src\TextureLoader</Filter>
+    </ClCompile>
+    <ClCompile Include="Color.cpp">
+      <Filter>src\TextureLoader</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="EditorCore.h">
@@ -67,6 +73,12 @@
     </ClInclude>
     <ClInclude Include="clip.h">
       <Filter>Headers\Clip</Filter>
+    </ClInclude>
+    <ClInclude Include="Material.h">
+      <Filter>Headers\TextureLoader</Filter>
+    </ClInclude>
+    <ClInclude Include="Color.h">
+      <Filter>Headers\TextureLoader</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
