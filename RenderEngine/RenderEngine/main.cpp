@@ -11,6 +11,8 @@
 #include "MeshRLoader.h"
 #include "Texture.h"
 #include "clip.h"
+#include "Color.h"
+#include "Material.h"
 
 #define WIDTH  800
 #define HEIGHT 600
@@ -19,10 +21,6 @@
 #define CULL_BACKFACES true
 #define USE_ZBUFFER true
 #define PERSPECTIVE_CORRECT true
-#define BILINEAR true   // false = plus proche voisin (blocs visibles de près)
-#define AMBIENT 0.18f
-#define SPEC_STRENGTH  0.55f   // 0 = no highlight, 1 = as bright as the light
-
 
 static uint32_t framebuffer[WIDTH * HEIGHT];
 static float    zbuffer[WIDTH * HEIGHT];
@@ -48,42 +46,42 @@ void drawPixels( int sizeX, int sizeY) // ajoute des pixel d'une coordonné x à
 
 	glDrawPixels(WIDTH, HEIGHT, GL_RGBA, GL_UNSIGNED_BYTE, framebuffer);
 }
-
-static void draw_line(int x0, int y0, int x1, int y1, uint32_t color) // draw une ligne x1 et y1 doivent etre plus grand que x0 et y0 et ce sont eux qui modifie lal size de la ligne
-{
-
-	//int dx = x1 - x0; // delta de x
-	//int dy = y1 - y0; // delta de y
-	//int E = 2 * dy - dx; // calcul de E par rapport à delta de x et y 
-	//int y = y0;
-	//for (int x = x0; x < x1; x++) 
-	//{
-	//	put_pixel(x, y,rgb(0,0,250));
-	//	if (E > 0) 
-	//	{
-	//		y = y + 1;
-	//		E = E + 2 * (dy - dx);
-	//	}
-	//	else 
-	//	{
-	//		E = E + 2 * dy;
-	//	}
-	//}
-
-	int dx = abs(x1 - x0);
-	int dy = -abs(y1 - y0);          // dy is NEGATIVE on purpose, see below
-	int sx = (x0 < x1) ? 1 : -1;     // step direction in x
-	int sy = (y0 < y1) ? 1 : -1;     // step direction in y
-	int err = dx + dy;               // = dx - |dy|
-
-	while (true) {
-		put_pixel(x0, y0, color);
-		if (x0 == x1 && y0 == y1) break;
-		int e2 = 2 * err;
-		if (e2 >= dy) { err += dy; x0 += sx; }   // step in x?
-		if (e2 <= dx) { err += dx; y0 += sy; }   // step in y?
-	}
-}
+//
+//static void draw_line(int x0, int y0, int x1, int y1, uint32_t color) // draw une ligne x1 et y1 doivent etre plus grand que x0 et y0 et ce sont eux qui modifie lal size de la ligne
+//{
+//
+//	//int dx = x1 - x0; // delta de x
+//	//int dy = y1 - y0; // delta de y
+//	//int E = 2 * dy - dx; // calcul de E par rapport à delta de x et y 
+//	//int y = y0;
+//	//for (int x = x0; x < x1; x++) 
+//	//{
+//	//	put_pixel(x, y,rgb(0,0,250));
+//	//	if (E > 0) 
+//	//	{
+//	//		y = y + 1;
+//	//		E = E + 2 * (dy - dx);
+//	//	}
+//	//	else 
+//	//	{
+//	//		E = E + 2 * dy;
+//	//	}
+//	//}
+//
+//	int dx = abs(x1 - x0);
+//	int dy = -abs(y1 - y0);          // dy is NEGATIVE on purpose, see below
+//	int sx = (x0 < x1) ? 1 : -1;     // step direction in x
+//	int sy = (y0 < y1) ? 1 : -1;     // step direction in y
+//	int err = dx + dy;               // = dx - |dy|
+//
+//	while (true) {
+//		put_pixel(x0, y0, color);
+//		if (x0 == x1 && y0 == y1) break;
+//		int e2 = 2 * err;
+//		if (e2 >= dy) { err += dy; x0 += sx; }   // step in x?
+//		if (e2 <= dx) { err += dx; y0 += sy; }   // step in y?
+//	}
+//}
 
 inline int edge(int x0, int y0, int x1 ,int y1, int Px, int Py) 
 {
@@ -147,20 +145,6 @@ static void compute_vertex_normals(const Mesh* mesh, const Maths::Vec3S* face_no
 }
 
 
-// Combine a texel with diffuse shading and a white specular add.
-// diffuse_k multiplies the texel; spec_k adds white·spec_k. Clamped.
-static inline uint32_t color_phong(uint32_t texel, float diffuse_k, float spec_k) {
-	float r = (float)((texel >> 16) & 0xFF) * diffuse_k + 255.0f * spec_k;
-	float g = (float)((texel >> 8) & 0xFF) * diffuse_k + 255.0f * spec_k;
-	float b = (float)(texel & 0xFF) * diffuse_k + 255.0f * spec_k;
-	if (r > 255.0f) r = 255.0f;
-	if (g > 255.0f) g = 255.0f;
-	if (b > 255.0f) b = 255.0f;
-	return ((uint32_t)0xFFu << 24)
-		| ((uint32_t)r << 16) | ((uint32_t)g << 8) | (uint32_t)b;
-}
-
-
 
 
 // Phong-shaded textured triangle: per-vertex world-space normals
@@ -170,7 +154,7 @@ static void draw_triangle_phong(
 	int x0, int y0, float z0, float iw0, Maths::Vec2S uv0, Maths::Vec3S n0,
 	int x1, int y1, float z1, float iw1, Maths::Vec2S uv1, Maths::Vec3S n1,
 	int x2, int y2, float z2, float iw2, Maths::Vec2S uv2, Maths::Vec3S n2,
-	const Texture* tex, Maths::Vec3S L, Maths::Vec3S H) {
+	const Material* mat, Maths::Vec3S L, Maths::Vec3S H) {
 	int area = edge(x0, y0, x1, y1, x2, y2);
 	if (area == 0) return;
 
@@ -226,30 +210,23 @@ static void draw_triangle_phong(
 
 			float ndotl = N.Dot(L);
 			if (ndotl < 0.0f) ndotl = 0.0f;
-			float diffuse_k = AMBIENT + (1.0f - AMBIENT) * ndotl;
 
 			float ndoth = N.Dot(H);
 			if (ndoth < 0.0f) ndoth = 0.0f;
-			float spec_k = std::powf(ndoth, 32) * SPEC_STRENGTH;
 
-#if BILINEAR
-			uint32_t texel = tex->sampleBilinear(u, v);
-#else
-			uint32_t texel = tex->sample(u, v);
-#endif
 			zbuffer[idx] = z;
-			framebuffer[idx] = color_phong(texel, diffuse_k, spec_k);
+			framebuffer[idx] = mat->Shade(u, v, ndotl, ndoth);
 		}
 	}
 }
-static void projectAndDraw(const ClipVertex* tri, const Texture* tex,
+static void projectAndDraw(const ClipVertex* tri, const Material* mat,
 	Maths::Vec3S L, Maths::Vec3S H) {
 	int   sx[3], sy[3];
 	float ndcZ[3], invW[3];
 	for (int k = 0; k < 3; k++) {
 		float inv = 1.0f / tri[k].clip.w;
 		sx[k] = (int)((tri[k].clip.x * inv + 1.0f) * 0.5f * WIDTH);
-		sy[k] = (int)((tri[k].clip.y * inv + 1.0f) * 0.5f * HEIGHT);  // ton Y n'est pas inversé
+		sy[k] = (int)((tri[k].clip.y * inv + 1.0f) * 0.5f * HEIGHT);  
 		ndcZ[k] = tri[k].clip.z * inv;
 		invW[k] = inv;
 	}
@@ -259,11 +236,11 @@ static void projectAndDraw(const ClipVertex* tri, const Texture* tex,
 	draw_triangle_phong(sx[0], sy[0], ndcZ[0], invW[0], tri[0].uv, tri[0].normal,
 		sx[1], sy[1], ndcZ[1], invW[1], tri[1].uv, tri[1].normal,
 		sx[2], sy[2], ndcZ[2], invW[2], tri[2].uv, tri[2].normal,
-		tex, L, H);
+		mat, L, H);
 }
 
 
-static void drawMeshTextured(const Mesh& mesh, const Maths::Matrix4x4SIMD& mvp, Maths::Matrix4x4SIMD model,  const Texture& tex, Maths::Vec3S* face_normals, Maths::Vec3S* vertex_normals)
+static void drawMeshTextured(const Mesh& mesh, const Maths::Matrix4x4SIMD& mvp, Maths::Matrix4x4SIMD model,  const Material& mat, Maths::Vec3S* face_normals, Maths::Vec3S* vertex_normals)
 {
 	const int vcount = (int)mesh.verts.size();
 
@@ -300,7 +277,7 @@ static void drawMeshTextured(const Mesh& mesh, const Maths::Matrix4x4SIMD& mvp, 
 		ClipTriangleNear(v0, v1, v2, out, &nTris);
 
 		for (int t = 0; t < nTris; t++)
-			projectAndDraw(&out[t * 3], &tex, light, half_vec);
+			projectAndDraw(&out[t * 3], &mat, light, half_vec);
 	}
 }
 
@@ -313,9 +290,12 @@ int main()
 		return -1;
 	}
 	
-	Texture texture;
-	if (!texture.load("assets/spot_texture.png"))
+	auto texture = std::make_shared<Texture>();
+	if (!texture->load("assets/spot_texture.png"))
 		return 1;
+
+	Material material;
+	material.setAlbedoMap(texture);
 
 	Mesh mesh;
 	if (!MeshLoader::loadMesh("assets/spot.obj", mesh))
@@ -365,7 +345,7 @@ int main()
 
 	float lastTime = glfwGetTime();
 	int frameCount = 0;
-
+	Color color(16, 16, 24);
 	while (!glfwWindowShouldClose(window)) {
 		glfwPollEvents();
 
@@ -375,10 +355,10 @@ int main()
 		Maths::Matrix4x4SIMD model = Maths::Matrix4x4SIMD::RotationY(angle * 0.7f);
 		Maths::Matrix4x4SIMD mvp = projection * view * model;
 
-		clear(rgb(16, 16, 24));
+		clear(color.Getrgb());
 		clear_zbuffer();
 
-		drawMeshTextured(mesh, mvp, model, texture, face_normals, vertex_normals);
+		drawMeshTextured(mesh, mvp, model, material, face_normals, vertex_normals);
 
 		glDrawPixels(WIDTH, HEIGHT, GL_RGBA, GL_UNSIGNED_BYTE, framebuffer);
 		glfwSwapBuffers(window);
