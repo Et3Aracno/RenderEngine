@@ -10,8 +10,7 @@ inline uint32_t Material::shade_channel(uint32_t texel, int shift,
     float c = ((texel >> shift) & 0xFF) / 255.0f;
 
     float spec_color = 1.0f + (c - 1.0f) * metallic;
-    float val = c * diffuse_k * (1.0f - metallic)
-        + spec_color * spec_k;
+    float val = c * diffuse_k * (1.0f - metallic) + spec_color * spec_k;
 
     if (val > 1.0f) val = 1.0f;
     return (uint32_t)(val * 255.0f);
