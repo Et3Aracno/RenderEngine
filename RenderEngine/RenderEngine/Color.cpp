@@ -16,7 +16,7 @@ uint32_t Color::Getrgb() const {
         | ((uint32_t)g() << 8) | (uint32_t)r();
 }
 
-void Color::setRgb(uint8_t a, uint8_t r, uint8_t g, uint8_t b) {
+void Color::setRgb(uint8_t a, uint8_t b, uint8_t g, uint8_t r) {
     c[0] = r;
     c[1] = g;
     c[2] = b;

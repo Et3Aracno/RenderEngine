@@ -16,6 +16,20 @@ inline uint32_t Material::shade_channel(uint32_t texel, int shift,
     return (uint32_t)(val * 255.0f);
 }
 
+uint32_t Material::rdPass(uint32_t src, uint32_t dst) const
+{
+	Color csrc(src);
+	Color cdst(dst);
+    const float alpha = getOpacity();
+    const float invAlpha = 1.0f - alpha;
+
+    uint8_t r = alpha * csrc.r() + invAlpha * cdst.r();
+    uint8_t g = alpha * csrc.g() + invAlpha * cdst.g();
+    uint8_t b = alpha * csrc.b() + invAlpha * cdst.b();
+
+	return 0xFF000000u | (b << 16) | (g << 8) | r;
+}
+
 uint32_t Material::Shade(float u, float v, float ndotl, float ndoth) const {
 
 	uint32_t texel = 0xFFFFFFFF; // base color = white
@@ -28,9 +42,13 @@ uint32_t Material::Shade(float u, float v, float ndotl, float ndoth) const {
     float exposant = std::exp2(1.0f + 9.0f * smoothness);
     float spec_k = std::pow(ndoth, exposant) * specStrength;
 
+    const float textureAlpha = ((texel >> 24) & 0xFF) / 255.0f;
+    const float alpha = textureAlpha * getOpacity();
+
     uint32_t r = shade_channel(texel, 0, diffuse_k, spec_k, metallic);
     uint32_t g = shade_channel(texel, 8, diffuse_k, spec_k, metallic);
     uint32_t b = shade_channel(texel, 16, diffuse_k, spec_k, metallic);
+    uint32_t a = alpha * 255.0f + 0.5f;
 
-    return 0xFF000000u | (b << 16) | (g << 8) | r;
+    return (a<<24) | (b << 16) | (g << 8) | r;
 }

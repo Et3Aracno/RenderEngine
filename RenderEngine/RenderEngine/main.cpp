@@ -13,6 +13,7 @@
 #include "clip.h"
 #include "Color.h"
 #include "Material.h"
+#include "Font.h"
 
 #define WIDTH  800
 #define HEIGHT 600
@@ -192,6 +193,7 @@ static void draw_triangle_phong(
 			float l2 = e2 * inv_area;
 
 			float z = l0 * z0 + l1 * z1 + l2 * z2;
+
 			int idx = y * WIDTH + x;
 			if (z >= zbuffer[idx]) continue;
 
@@ -214,8 +216,17 @@ static void draw_triangle_phong(
 			float ndoth = N.Dot(H);
 			if (ndoth < 0.0f) ndoth = 0.0f;
 
+
+			uint32_t src = mat->Shade(u, v, ndotl, ndoth);
+			uint32_t dst = framebuffer[idx];
+
+			
+
 			zbuffer[idx] = z;
-			framebuffer[idx] = mat->Shade(u, v, ndotl, ndoth);
+			framebuffer[idx] = mat->rdPass(src, dst);
+
+			
+
 		}
 	}
 }
@@ -293,9 +304,14 @@ int main()
 	auto texture = std::make_shared<Texture>();
 	if (!texture->load("assets/spot_texture.png"))
 		return 1;
+	Font font;
+	if (!font.loadFont("assets/SIXTY.TTF"))
+		return 1;
+	
 
 	Material material;
 	material.setAlbedoMap(texture);
+	material.setOpacity(0.5f);
 
 	Mesh mesh;
 	if (!MeshLoader::loadMesh("assets/spot.obj", mesh))
@@ -358,6 +374,7 @@ int main()
 		clear(color.Getrgb());
 		clear_zbuffer();
 
+		
 		drawMeshTextured(mesh, mvp, model, material, face_normals, vertex_normals);
 
 		glDrawPixels(WIDTH, HEIGHT, GL_RGBA, GL_UNSIGNED_BYTE, framebuffer);

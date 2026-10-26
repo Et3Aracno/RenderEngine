@@ -46,6 +46,12 @@
     <Filter Include="src\Material">
       <UniqueIdentifier>{e25a686d-dd5c-4255-b267-0e7d087cf80f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\Font">
+      <UniqueIdentifier>{4940dea8-1c9f-4b68-91ef-aa83a6187667}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Headers\Font">
+      <UniqueIdentifier>{1b7c95e7-28cb-43d0-b35f-97acf073c7a0}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -66,6 +72,9 @@
     <ClCompile Include="Material.cpp">
       <Filter>src\Material</Filter>
     </ClCompile>
+    <ClCompile Include="Font.cpp">
+      <Filter>src\Font</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="EditorCore.h">
@@ -85,6 +94,9 @@
     </ClInclude>
     <ClInclude Include="Material.h">
       <Filter>Headers\Material</Filter>
+    </ClInclude>
+    <ClInclude Include="Font.h">
+      <Filter>Headers\Font</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

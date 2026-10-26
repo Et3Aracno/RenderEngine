@@ -12,9 +12,9 @@ public:
 
 
 
-    Color(uint8_t r = 0, uint8_t g = 0, uint8_t b = 0, uint8_t a = 255) : c({ r, g, b, a }) {}
+    Color(uint8_t r = 0, uint8_t g = 0, uint8_t b = 0, uint8_t a = 0) : c({ r, g, b, a }) {}
     Color(const std::array<uint8_t, 4>& color) : c(color) {}
-
+    Color(uint32_t color): c({ static_cast<uint8_t>(color & 0xFF), static_cast<uint8_t>((color >> 8) & 0xFF), static_cast<uint8_t>((color >> 16) & 0xFF), static_cast<uint8_t>((color >> 24) & 0xFF)}){}
 
     Color operator+(const Color& other) const;
     Color& operator=(const Color& color) = default;

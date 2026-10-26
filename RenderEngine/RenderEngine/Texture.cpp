@@ -62,8 +62,8 @@ uint32_t Texture::sample(float u, float v) const
     v -= std::floor(v);
 
     // Plus proche voisin, avec flip de V (OBJ en bas, image en haut)
-    int x = (int)(u * (float)width);
-    int y = (int)((1.0f - v) * (float)height);
+    int x = (u * width);
+    int y = ((1.0f - v) * height);
 
     // u ou v peuvent valoir exactement 1.0 après l'arrondi flottant
     x = std::clamp(x, 0, width - 1);
@@ -83,13 +83,13 @@ uint32_t Texture::sampleBilinear(float u, float v) const
 
     // Position en coordonnées texel. Le -0.5 décale vers les CENTRES des texels :
     // sans ça, l'image serait décalée d'un demi-texel.
-    float fx = u * (float)width - 0.5f;
+    float fx = u * width - 0.5f;
     float fy = (1.0f - v) * (float)height - 0.5f;
 
-    int x0 = (int)std::floor(fx);
-    int y0 = (int)std::floor(fy);
-    float tx = fx - (float)x0;   // partie fractionnaire = poids horizontal
-    float ty = fy - (float)y0;   // partie fractionnaire = poids vertical
+    int x0 = std::floor(fx);
+    int y0 = std::floor(fy);
+    float tx = fx - x0;   // partie fractionnaire = poids horizontal
+    float ty = fy - y0;   // partie fractionnaire = poids vertical
 
     // Les 4 texels voisins, avec wrap aux bords
     auto wrap = [](int i, int n) { return ((i % n) + n) % n; };
@@ -111,10 +111,10 @@ uint32_t Texture::sampleBilinear(float u, float v) const
     uint32_t result = 0;
     for (int shift = 0; shift <= 24; shift += 8)
     {
-        float ch = (float)((c00 >> shift) & 0xFF) * w00
-            + (float)((c10 >> shift) & 0xFF) * w10
-            + (float)((c01 >> shift) & 0xFF) * w01
-            + (float)((c11 >> shift) & 0xFF) * w11;
+            float ch = ((c00 >> shift) & 0xFF) * w00
+                     + ((c10 >> shift) & 0xFF) * w10
+                     + ((c01 >> shift) & 0xFF) * w01
+                     + ((c11 >> shift) & 0xFF) * w11;
         result |= ((uint32_t)(ch + 0.5f) & 0xFF) << shift;
     }
     return result;
