@@ -304,6 +304,7 @@ int main()
 	auto texture = std::make_shared<Texture>();
 	if (!texture->load("assets/spot_texture.png"))
 		return 1;
+
 	Font font;
 	if (!font.loadFont("assets/SIXTY.TTF"))
 		return 1;
@@ -311,7 +312,7 @@ int main()
 
 	Material material;
 	material.setAlbedoMap(texture);
-	material.setOpacity(0.5f);
+	material.setOpacity(0.9f);
 
 	Mesh mesh;
 	if (!MeshLoader::loadMesh("assets/spot.obj", mesh))
@@ -335,7 +336,7 @@ int main()
 	const uint64_t start = glfwGetTimerValue();
 
 	GLFWwindow* window = glfwCreateWindow(800, 600, "hello", NULL, NULL);
-
+	glfwSwapInterval(0);
 
 	// Projection and view stay fixed; only the model spins.
 	const float aspect = (float)WIDTH / (float)HEIGHT;
@@ -359,7 +360,7 @@ int main()
 
 	glfwMakeContextCurrent(window);
 
-	float lastTime = glfwGetTime();
+	double lastTime = glfwGetTime();
 	int frameCount = 0;
 	Color color(16, 16, 24);
 	while (!glfwWindowShouldClose(window)) {
@@ -380,7 +381,7 @@ int main()
 		glDrawPixels(WIDTH, HEIGHT, GL_RGBA, GL_UNSIGNED_BYTE, framebuffer);
 		glfwSwapBuffers(window);
 
-		float currentTime = glfwGetTime();
+		double currentTime = glfwGetTime();
 		frameCount++;
 
 		if(currentTime - lastTime >= 1){

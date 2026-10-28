@@ -23,9 +23,13 @@ uint32_t Material::rdPass(uint32_t src, uint32_t dst) const
     const float alpha = getOpacity();
     const float invAlpha = 1.0f - alpha;
 
+
     uint8_t r = alpha * csrc.r() + invAlpha * cdst.r();
+    uint8_t rt = alpha * src + invAlpha * dst;
     uint8_t g = alpha * csrc.g() + invAlpha * cdst.g();
+    uint8_t gt = alpha * (src << 16) + invAlpha * (dst << 16);
     uint8_t b = alpha * csrc.b() + invAlpha * cdst.b();
+    uint8_t bt = alpha * (src << 24) + invAlpha * (dst << 24);
 
 	return 0xFF000000u | (b << 16) | (g << 8) | r;
 }
