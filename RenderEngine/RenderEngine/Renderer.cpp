@@ -1,14 +1,38 @@
 #include "Renderer.h"
-#include "GLFW/glfw3.h"
+
+#include "MeshRLoader.h"
+#include "Texture.h"
+#include "clip.h"
+#include "Material.h"
+#include "Font.h"
+#include <stdexcept>
+
+
+Renderer* Renderer::r_instance = nullptr;
+uint32_t  Renderer::framebuffer[Renderer::defaultWidth * Renderer::defaultHeight];
+float     Renderer::zbuffer[Renderer::defaultWidth * Renderer::defaultHeight];
+
+Renderer::Renderer()
+{
+	if (r_instance != nullptr)
+		throw std::runtime_error("Renderer deja instancie !");
+	r_instance = this;
+}
+
+Renderer::~Renderer()
+{
+	if (r_instance == this)
+		r_instance = nullptr;
+}
 
 void Renderer::clearColor(uint32_t color)
 {
-	for (int i = 0; i < SizeWxH; i++) framebuffer[i] = color;
+	for (int i = 0; i < GetSizeWxH(); i++) framebuffer[i] = color;
 }
 
 void Renderer::clearZbuffer()
 {
-	for (int i = 0; i < SizeWxH; i++) zbuffer[i] = std::numeric_limits<float>::max();
+	for (int i = 0; i < GetSizeWxH(); i++) zbuffer[i] = std::numeric_limits<float>::max();
 }
 
 
@@ -89,15 +113,15 @@ void Renderer::draw_line(Maths::Vec2S v1, Maths::Vec2S v2, uint32_t color) // dr
 			E = E + 2 * dy;
 		}
 	}
-	int dx = abs(v2.x - v1.x);
-	int dy = -abs(v2.y - v1.y);          // dy is NEGATIVE on purpose, see below
+	dx = abs(v2.x - v1.x);
+	dy = -abs(v2.y - v1.y);          // dy is NEGATIVE on purpose, see below
 	int sx = (v1.x < v2.x) ? 1 : -1;     // step direction in x
 	int sy = (v1.y < v2.y) ? 1 : -1;     // step direction in y
 	int err = dx + dy;               // = dx - |dy|
 
 	while (true) {
 		put_pixel(v1.x, v2.y, Color(color).Getrgb());
-		if (v1.x == v2.x && y0 == y1) break;
+		if (v1.x == v2.x && v1.y == v1.y) break;
 		int e2 = 2 * err;
 		if (e2 >= dy) { err += dy; v1.x += sx; }   // step in x?
 		if (e2 <= dx) { err += dx; v1.y += sy; }   // step in y?
@@ -115,16 +139,20 @@ inline void Renderer::draw_triangle_phong(
 	if (area == 0) return;
 
 	if (area < 0) {
-		int   tx = x1, ty = y1; float tz = z1, tiw = iw1; Maths::Vec2S tuv = uv1; Maths::Vec3S	 tn = n1;
-		x1 = x2; y1 = y2; z1 = z2; iw1 = iw2; uv1 = uv2; n1 = n2;
-		x2 = tx; y2 = ty; z2 = tz; iw2 = tiw; uv2 = tuv; n2 = tn;
+		Maths::Vec3S t = v1;
+		int tiw = iw1; 
+		Maths::Vec2S tuv = uv1; 
+		Maths::Vec3S tn = n1;
+		v1 = v2;
+		iw1 = iw2; uv1 = uv2; n1 = n2;
+		v2 = t;
+		iw2 = tiw; uv2 = tuv; n2 = tn;
 		area = -area;
 	}
-
-	int minx = clampi(x0 < x1 ? (x0 < x2 ? x0 : x2) : (x1 < x2 ? x1 : x2), 0, WIDTH - 1);
-	int miny = clampi(y0 < y1 ? (y0 < y2 ? y0 : y2) : (y1 < y2 ? y1 : y2), 0, HEIGHT - 1);
-	int maxx = clampi(x0 > x1 ? (x0 > x2 ? x0 : x2) : (x1 > x2 ? x1 : x2), 0, WIDTH - 1);
-	int maxy = clampi(y0 > y1 ? (y0 > y2 ? y0 : y2) : (y1 > y2 ? y1 : y2), 0, HEIGHT - 1);
+	int minx = clampi(v0.x < v1.x ? (v0.x < v2.x ? v0.x : v2.x) : (v1.x < v2.x ? v1.x : v2.x), 0, defaultWidth - 1);
+	int miny = clampi(v0.y < v1.y ? (v0.y < v2.y ? v0.y : v2.y) : (v1.y < v2.y ? v1.y : v2.y), 0, defaultHeight - 1);
+	int maxx = clampi(v0.x > v1.x ? (v0.x > v2.x ? v0.x : v2.x) : (v1.x > v2.x ? v1.x : v2.x), 0, defaultWidth - 1);
+	int maxy = clampi(v0.y > v1.y ? (v0.y > v2.y ? v0.y : v2.y) : (v1.y > v2.y ? v1.y : v2.y), 0, defaultHeight - 1);
 
 	float inv_area = 1.0f / (float)area;
 
@@ -138,19 +166,20 @@ inline void Renderer::draw_triangle_phong(
 
 	for (int y = miny; y <= maxy; y++) {
 		for (int x = minx; x <= maxx; x++) {
-			int e0 = edge(x1, y1, x2, y2, x, y);
-			int e1 = edge(x2, y2, x0, y0, x, y);
-			int e2 = edge(x0, y0, x1, y1, x, y);
+			int e0 = edge(Maths::Vec2S(v1.x, v1.y), Maths::Vec2S(v2.x, v2.y), Maths::Vec2S(x, y));
+			int e1 = edge(Maths::Vec2S(v2.x, v2.y), Maths::Vec2S(v0.x, v0.y), Maths::Vec2S(x, y));
+			int e2 = edge(Maths::Vec2S(v0.x, v0.y), Maths::Vec2S(v1.x, v1.y), Maths::Vec2S(x, y));
 			if ((e0 | e1 | e2) < 0) continue;
 
 			float l0 = e0 * inv_area;
 			float l1 = e1 * inv_area;
 			float l2 = e2 * inv_area;
 
-			float z = l0 * z0 + l1 * z1 + l2 * z2;
+			float z = l0 * v0.z + l1 * v1.z + l2 * v2.z;
 
-			int idx = y * WIDTH + x;
+			int idx = y * defaultWidth + x;
 			if (z >= zbuffer[idx]) continue;
+
 
 			float iw = l0 * iw0 + l1 * iw1 + l2 * iw2;
 			float inv_iw = 1.0f / iw;
@@ -188,8 +217,178 @@ inline void Renderer::draw_triangle_phong(
 
 
 
+inline void Renderer::projectAndDraw(const ClipVertex* tri, const Material* mat, Maths::Vec3S L, Maths::Vec3S H) {
+	int   sx[3], sy[3];
+	float ndcZ[3], invW[3];
+	for (int k = 0; k < 3; k++) {
+		float inv = 1.0f / tri[k].clip.w;
+		sx[k] = (tri[k].clip.x * inv + 1.0f) * 0.5f * defaultWidth;
+		sy[k] = (tri[k].clip.y * inv + 1.0f) * 0.5f * defaultHeight;
+		ndcZ[k] = tri[k].clip.z * inv;
+		invW[k] = inv;
+	}
+
+	if (edge(Maths::Vec2S(sx[0], sy[0]), Maths::Vec2S(sx[1], sy[1]), Maths::Vec2S(sx[2], sy[2])) <= 0) return;  // cull (ton sens actuel)
+
+	draw_triangle_phong(
+		Maths::Vec3S(sx[0], sy[0], ndcZ[0]), invW[0], tri[0].uv, tri[0].normal,
+		Maths::Vec3S(sx[1], sy[1], ndcZ[1]), invW[1], tri[1].uv, tri[1].normal,
+		Maths::Vec3S(sx[2], sy[2], ndcZ[2]), invW[2], tri[2].uv, tri[2].normal,
+		mat, L, H);
+}
+
+
+ void Renderer::drawMeshTextured(const Mesh& mesh, const Maths::Matrix4x4SIMD& mvp, Maths::Matrix4x4SIMD model, const Material& mat, Maths::Vec3S* face_normals, Maths::Vec3S* vertex_normals)
+{
+	const int vcount = (int)mesh.verts.size();
+
+	const Maths::Vec3S light = (Maths::Vec3S(0.4f, 0.8f, 0.45f)).Normalize();
+	const Maths::Vec3S view_dir = Maths::Vec3S(0, 0, 1);
+	const Maths::Vec3S half_vec = (light + view_dir).Normalize();
+
+	// Étape 1 : par sommet du mesh -> clip space seulement (PAS de division par w)
+	std::vector<Maths::Vec4S> clipV(vcount);
+	std::vector<Maths::Vec3S> normalWorld(vcount);
+	for (int i = 0; i < vcount; i++) {
+		clipV[i] = mvp.operator*(Maths::Vec4S::FromPoint(mesh.verts[i]));
+		normalWorld[i] = model * vertex_normals[i];
+	}
+
+	// Étape 2 : par triangle -> clipping, puis projection + dessin
+	for (int fidx = 0; fidx < (int)mesh.faces.size() / 3; fidx++) {
+		Maths::Vec3S abc;
+		abc.x = mesh.faces[fidx * 3 + 0];
+		abc.y = mesh.faces[fidx * 3 + 1];
+		abc.z = mesh.faces[fidx * 3 + 2];
+
+		Maths::Vec3S u;
+		u.x = mesh.texFaces[fidx * 3 + 0];
+		u.y = mesh.texFaces[fidx * 3 + 1];
+		u.z = mesh.texFaces[fidx * 3 + 2];
+
+		ClipVertex v0, v1, v2;
+		v0.clip = clipV[abc.x]; v0.normal = normalWorld[abc.x]; v0.uv = (u.x >= 0) ? mesh.textures[u.x] : Maths::Vec2S(0, 0);
+		v1.clip = clipV[abc.y]; v1.normal = normalWorld[abc.y]; v1.uv = (u.y >= 0) ? mesh.textures[u.y] : Maths::Vec2S(0, 0);
+		v2.clip = clipV[abc.z]; v2.normal = normalWorld[abc.z]; v2.uv = (u.z >= 0) ? mesh.textures[u.z] : Maths::Vec2S(0, 0);
+
+		// Clip contre le plan near -> 0, 1 ou 2 triangles
+		ClipVertex out[6];
+		int nTris;
+		ClipTriangleNear(v0, v1, v2, out, &nTris);
+
+		for (int t = 0; t < nTris; t++)
+			projectAndDraw(&out[t * 3], &mat, light, half_vec);
+	}
+}
+
+
 void Renderer::init()
 {
+	if (!glfwInit()) {
+		std::cout << "Échec de glfwInit\n";
+	}
 
 
+	
+}
+
+
+void Renderer::update()
+{
+
+	// Les load vont etre deplacer dans un loader global avec des vec de texture et font en shared ce qui va permettre de juste selectionner par "id" chaque élément pour le draw un struct sera plus opti pour ça 
+	auto texture = std::make_shared<Texture>();
+	texture->load("assets/spot_texture.png");
+
+	Font font;
+	font.loadFont("assets/SIXTY.TTF");
+
+
+
+	Mesh mesh;
+	MeshLoader::loadMesh("assets/spot.obj", mesh);
+
+
+	Material material;
+	material.setAlbedoMap(texture);
+	material.setOpacity(0.9f);
+
+
+
+
+	// One model-space normal per triangle, computed once.
+	Maths::Vec3S* face_normals = (Maths::Vec3S*)malloc(mesh.faces.size() * sizeof(Maths::Vec3S));
+	Maths::Vec3S* vertex_normals = (Maths::Vec3S*)malloc(mesh.verts.size() * sizeof(Maths::Vec3S));
+	compute_face_normals(&mesh, face_normals);
+	compute_vertex_normals(&mesh, face_normals, vertex_normals);
+
+
+
+
+	const uint64_t freq = glfwGetTimerFrequency();
+	const uint64_t start = glfwGetTimerValue();
+
+	Renderer::window = glfwCreateWindow(defaultWidth, defaultHeight, "hello", NULL, NULL);
+	glfwSwapInterval(0);
+
+	// Projection and view stay fixed; only the model spins.
+	const float aspect = defaultWidth / defaultHeight;
+
+	// 60-degree vertical field of view (radians() converts to the
+	// radians the math needs); window shape; near and far clip
+	// distances. See README section 5.6.
+	const Maths::Matrix4x4SIMD projection = Maths::Matrix4x4SIMD::Perspective(Maths::Matrix4x4SIMD::radians(60.0f), aspect, 0.1f, 100.0f);
+
+	// Camera: positioned 5 units back on +z (eye), aimed at the
+	// origin (target), with world-up being +y. See README section 5.10.
+	const Maths::Vec3S eye{ 0, 0, 3 };
+	const Maths::Vec3S target{ 0, 0, 0 };
+	const Maths::Vec3S up{ 0, 1, 0 };
+	const Maths::Matrix4x4SIMD view = Maths::Matrix4x4SIMD::LookAt(eye, target, up);
+
+
+	glfwMakeContextCurrent(window);
+
+	double lastTime = glfwGetTime();
+	int frameCount = 0;
+	Color color(16, 16, 24);
+
+
+
+
+
+
+	while (!glfwWindowShouldClose(window)) {
+		glfwPollEvents();
+
+		double seconds = (double)(glfwGetTimerValue() - start) / (double)freq;		//tick / frequence  = temps en seconde					
+		float angle = (float)seconds;   // 1 radian par seconde
+
+		Maths::Matrix4x4SIMD model = Maths::Matrix4x4SIMD::RotationY(angle * 0.7f);
+		Maths::Matrix4x4SIMD mvp = projection * view * model;
+
+		clearAllBuffer();
+
+
+		drawMeshTextured(mesh, mvp, model, material, face_normals, vertex_normals);
+
+		glDrawPixels(defaultWidth, defaultHeight, GL_RGBA, GL_UNSIGNED_BYTE, framebuffer);
+		glfwSwapBuffers(window);
+
+		double currentTime = glfwGetTime();
+		frameCount++;
+
+		if (currentTime - lastTime >= 1) {
+			double fps = frameCount / (currentTime - lastTime);
+
+			char title[256];
+			snprintf(title, sizeof(title), "FPS Counter [%.1f FPS]", fps);
+			glfwSetWindowTitle(window, title);
+
+			frameCount = 0;
+			lastTime = currentTime;
+		}
+	}
+	glfwDestroyWindow(window);
+	glfwTerminate();
 }

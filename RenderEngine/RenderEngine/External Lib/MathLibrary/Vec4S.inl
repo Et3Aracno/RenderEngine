@@ -1,6 +1,6 @@
 #pragma once
 #include "Vec4S.h"
-#include "Vec3S.h"
+
 
 
 inline __m128 Maths::Vec4S::Load(const Maths::Vec4S& v)

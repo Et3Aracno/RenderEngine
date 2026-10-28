@@ -8,14 +8,13 @@
 #include <stdlib.h>
 #include <limits>
 #include "External Lib/MathLibrary/MathLib.h"
-#include "MeshRLoader.h"
-#include "Texture.h"
-#include "clip.h"
 #include "Color.h"
-#include "Material.h"
-#include "Font.h"
+#include "GLFW/glfw3.h"
 
 
+class Mesh;
+class ClipVertex;
+class Material;
 
 
 
@@ -24,14 +23,14 @@ class Renderer {
 private:
 
 	//
-	static const int defaultWidth = 1100;
-	static const int defaultHeight = 900;
-	static const int SizeWxH = defaultWidth * defaultHeight;
+	static constexpr int defaultWidth = 800;
+	static constexpr int defaultHeight = 600;
+	static constexpr int SizeWxH = defaultWidth * defaultHeight;
 	Color defaultBcColor;
+	static Renderer* r_instance;
+	GLFWwindow* window = nullptr;
 
 	//
-	static uint32_t framebuffer[defaultWidth * defaultHeight];
-	static float    zbuffer[defaultWidth * defaultHeight];
 
 
 	//
@@ -41,10 +40,13 @@ private:
 	static inline int clampi(int v, int lo, int hi);
 	static void compute_face_normals(const Mesh* mesh, Maths::Vec3S* out);
 	static void compute_vertex_normals(const Mesh* mesh, const Maths::Vec3S* face_normals, Maths::Vec3S* out);
+
 protected:
 
 
 
+	static void drawMeshTextured(const Mesh& mesh, const Maths::Matrix4x4SIMD& mvp, Maths::Matrix4x4SIMD model, const Material& mat, Maths::Vec3S* face_normals, Maths::Vec3S* vertex_normals);
+	static void projectAndDraw(const ClipVertex* tri, const Material* mat, Maths::Vec3S L, Maths::Vec3S H);
 	void drawPx(int sizeX, int sizeY);
 	static inline void put_pixel(int x, int y, Color color);
 	static void draw_line(Maths::Vec2S x , Maths::Vec2S y, uint32_t color);
@@ -59,17 +61,25 @@ protected:
 
 public:
 
+	static uint32_t framebuffer[defaultWidth * defaultHeight];
+	static float    zbuffer[defaultWidth * defaultHeight];
 
 	void init();
 	void update();
 
 
+	Renderer();
+	~Renderer();
 
+	Renderer(const Renderer&) = delete;
+	Renderer& operator=(const Renderer&) = delete;
+
+	static Renderer* Instance() { return r_instance; }
 
 
 	Color GetBcColor() const { return defaultBcColor; }
 	void SetBcColor(Color color) { defaultBcColor = color; }
-
+	static constexpr int GetSizeWxH() { return SizeWxH; }
 
 
 
