@@ -11,5 +11,11 @@ bool Font::loadFont(const std::string& path)
         std::cerr << "Cannot open " << path << "\n"; return false; 
     }
 
+    
+
+
+
+
+
     return true;
 }

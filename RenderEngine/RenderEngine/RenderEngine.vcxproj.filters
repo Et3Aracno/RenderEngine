@@ -52,6 +52,12 @@
     <Filter Include="Headers\Font">
       <UniqueIdentifier>{1b7c95e7-28cb-43d0-b35f-97acf073c7a0}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Headers\Renderer">
+      <UniqueIdentifier>{8f68d154-e24f-4833-a433-e4e7921b27b5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\Renderer">
+      <UniqueIdentifier>{54e9a0c9-de61-4d40-b38f-4ab7f0fd0c91}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -75,6 +81,9 @@
     <ClCompile Include="Font.cpp">
       <Filter>src\Font</Filter>
     </ClCompile>
+    <ClCompile Include="Renderer.cpp">
+      <Filter>src\Renderer</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="EditorCore.h">
@@ -97,6 +106,9 @@
     </ClInclude>
     <ClInclude Include="Font.h">
       <Filter>Headers\Font</Filter>
+    </ClInclude>
+    <ClInclude Include="Renderer.h">
+      <Filter>Headers\Renderer</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

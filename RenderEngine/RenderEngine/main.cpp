@@ -15,13 +15,10 @@
 #include "Material.h"
 #include "Font.h"
 
-#define WIDTH  800
-#define HEIGHT 600
+#define WIDTH  1200
+#define HEIGHT 900
 #define PI 3.14159265358979323846f
 
-#define CULL_BACKFACES true
-#define USE_ZBUFFER true
-#define PERSPECTIVE_CORRECT true
 
 static uint32_t framebuffer[WIDTH * HEIGHT];
 static float    zbuffer[WIDTH * HEIGHT];
@@ -30,7 +27,7 @@ static void clear(uint32_t color) {
 	for (int i = 0; i < WIDTH * HEIGHT; i++) framebuffer[i] = color;
 }
 
-static void clear_zbuffer(void) {
+static void clear_zbuffer() {
 	for (int i = 0; i < WIDTH * HEIGHT; i++) zbuffer[i] = std::numeric_limits<float>::max();
 }
 
@@ -47,7 +44,7 @@ void drawPixels( int sizeX, int sizeY) // ajoute des pixel d'une coordonné x à
 
 	glDrawPixels(WIDTH, HEIGHT, GL_RGBA, GL_UNSIGNED_BYTE, framebuffer);
 }
-//
+
 //static void draw_line(int x0, int y0, int x1, int y1, uint32_t color) // draw une ligne x1 et y1 doivent etre plus grand que x0 et y0 et ce sont eux qui modifie lal size de la ligne
 //{
 //
@@ -95,22 +92,8 @@ static inline int clampi(int v, int lo, int hi) {
 }
 
 
-
-// Promote a 3D point to a 4D homogeneous point (w = 1).
-static inline Maths::Vec4S FromPoint(Maths::Vec3S p) {
-	Maths::Vec4S v = { p.x, p.y, p.z, 1.0f };
-	return v;
-} 
-
 // Scale an ARGB texel by a brightness in [0, 1], per channel.
-static inline uint32_t color_scale(uint32_t c, float k) {
-	if (k < 0.0f) k = 0.0f;
-	if (k > 1.0f) k = 1.0f;
-	uint32_t r = (uint32_t)((float)((c >> 16) & 0xFF) * k);
-	uint32_t g = (uint32_t)((float)((c >> 8) & 0xFF) * k);
-	uint32_t b = (uint32_t)((float)(c & 0xFF) * k);
-	return ((uint32_t)0xFFu << 24) | (r << 16) | (g << 8) | b;
-}
+
 
 // Per-triangle surface normal in MODEL space. Computed once at load:
 // the cross product of two edges is perpendicular to the triangle,
@@ -230,8 +213,7 @@ static void draw_triangle_phong(
 		}
 	}
 }
-static void projectAndDraw(const ClipVertex* tri, const Material* mat,
-	Maths::Vec3S L, Maths::Vec3S H) {
+static void projectAndDraw(const ClipVertex* tri, const Material* mat,Maths::Vec3S L, Maths::Vec3S H) {
 	int   sx[3], sy[3];
 	float ndcZ[3], invW[3];
 	for (int k = 0; k < 3; k++) {
@@ -335,7 +317,7 @@ int main()
 	const uint64_t freq = glfwGetTimerFrequency();
 	const uint64_t start = glfwGetTimerValue();
 
-	GLFWwindow* window = glfwCreateWindow(800, 600, "hello", NULL, NULL);
+	GLFWwindow* window = glfwCreateWindow(1200, 900, "hello", NULL, NULL);
 	glfwSwapInterval(0);
 
 	// Projection and view stay fixed; only the model spins.

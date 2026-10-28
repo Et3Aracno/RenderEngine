@@ -27,7 +27,7 @@ public:
 
     uint32_t Getrgb() const ;
     void setRgb(uint8_t a, uint8_t r, uint8_t g, uint8_t b);
-
+    static uint32_t color_scale(uint32_t c, float k);
 
 
     static const Color WHITE;

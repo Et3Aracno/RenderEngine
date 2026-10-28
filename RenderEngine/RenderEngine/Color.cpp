@@ -23,6 +23,17 @@ void Color::setRgb(uint8_t a, uint8_t b, uint8_t g, uint8_t r) {
     c[3] = a;
 }
 
+static inline uint32_t color_scale(uint32_t c, float k) {
+    if (k < 0.0f) k = 0.0f;
+    if (k > 1.0f) k = 1.0f;
+    const uint8_t sk = k;
+    uint32_t r = (c >> 16) * sk;
+    uint32_t g = (c >> 8) * sk;
+    uint32_t b = (c * sk);
+    return ((uint32_t)0xFFu << 24) | (r << 16) | (g << 8) | b;
+}
+
+
 
  const Color Color::WHITE = Color(255, 255, 255, 255);
  const Color Color::BLACK = Color(255, 0, 0, 0);

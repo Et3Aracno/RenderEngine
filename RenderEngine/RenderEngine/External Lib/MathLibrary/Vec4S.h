@@ -4,6 +4,7 @@
 #include <cmath>
 #include <concepts>
 #include <stdexcept>
+class Vec3S;
 
 namespace Maths
 {
@@ -50,8 +51,7 @@ namespace Maths
         static Vec4S Lerp(const Vec4S& a, const Vec4S& b, float t);
         static Vec4S Min(const Vec4S& a, const Vec4S& b);
         static Vec4S Max(const Vec4S& a, const Vec4S& b);
-
-        //static Vec4S FromPoint(Maths::Vec3S p);
+        static Vec4S FromPoint(Maths::Vec3S p);
 
         static const Vec4S Zero;
         static const Vec4S One;
