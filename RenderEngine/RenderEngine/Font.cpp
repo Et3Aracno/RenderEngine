@@ -94,7 +94,7 @@ bool Font::parseHeadAndMaxp()
 
     if (headIt == m_tables.end() || maxpIt == m_tables.end())
     {
-        std::cerr << "Table head ou maxp manquante\n";
+        throw std::runtime_error("Table head ou maxp manquante\n");
         return false;
     }
 
@@ -104,7 +104,7 @@ bool Font::parseHeadAndMaxp()
     // 2. Magic number : contrôle de cohérence
     if (readU32(headBase + 12) != 0x5F0F3CF5)
     {
-        std::cerr << "Magic number de head invalide\n";
+        throw std::runtime_error("Magic number de head invalide\n");
         return false;
     }
 
@@ -114,7 +114,7 @@ bool Font::parseHeadAndMaxp()
 
     if (m_indexToLocFormat != 0 && m_indexToLocFormat != 1)
     {
-        std::cerr << "indexToLocFormat invalide\n";
+        throw std::runtime_error("indexToLocFormat invalide\n");
         return false;
     }
 
@@ -122,5 +122,56 @@ bool Font::parseHeadAndMaxp()
     m_numGlyphs = readU16(maxpBase + 4);
 
 
-    return true;
+    return parseCmap();
+}
+
+bool Font::parseCmap()
+{
+   
+    auto cmapId = m_tables.find("cmap");
+    if (cmapId == m_tables.end()) {
+        throw std::runtime_error("cmap not found");
+    }
+    size_t base = cmapId->second.offset;
+
+    size_t nm_cmapSubtable = readU16(base + 2);
+
+    for (size_t i = 0; i < nm_cmapSubtable; i++) {
+
+        size_t location = base + 4 + i*8;
+
+        size_t platformID = readU16(location);
+
+        size_t encodingId = readU16(location + 2);
+
+
+
+        bool accepted = (platformID == 3 && encodingId == 1) || platformID == 0;
+        if (!accepted)
+            continue;
+
+
+        size_t offset = readU32(location+4);
+
+
+
+        size_t cmapAbsoluteloc = base + offset;
+        size_t U16format = readU16(cmapAbsoluteloc);
+        if (U16format != 4)
+            std::cerr << "Wrong address\n";
+
+        m_cmapSubtable = cmapAbsoluteloc;
+
+
+        std::cout << "platform=" << platformID << " encoding=" << encodingId
+            << " subtable=" << m_cmapSubtable
+            << " format=" << readU16(m_cmapSubtable) << "\n";
+        return true;
+    }
+
+
+    throw std::runtime_error("Aucune sous-table cmap format 4 Unicode trouvee");
+
+
+
 }
