@@ -303,7 +303,9 @@ void Renderer::update()
 	Font font;
 	font.loadFont("assets/SIXTY.TTF");
 
-
+	for (char c : std::string("A B~"))
+		std::cout << "'" << c << "' -> " << font.getGlyphIndex(c) << "\n";
+	std::cout << "U+4E2D -> " << font.getGlyphIndex(0x4E2D) << "\n";
 
 	Mesh mesh;
 	MeshLoader::loadMesh("assets/spot.obj", mesh);

@@ -125,6 +125,8 @@ bool Font::parseHeadAndMaxp()
     return parseCmap();
 }
 
+
+
 bool Font::parseCmap()
 {
    
@@ -161,11 +163,10 @@ bool Font::parseCmap()
             std::cerr << "Wrong address\n";
 
         m_cmapSubtable = cmapAbsoluteloc;
+        parseCmapSegments();
+        debugPrintSegments();
 
 
-        std::cout << "platform=" << platformID << " encoding=" << encodingId
-            << " subtable=" << m_cmapSubtable
-            << " format=" << readU16(m_cmapSubtable) << "\n";
         return true;
     }
 
@@ -174,4 +175,70 @@ bool Font::parseCmap()
 
 
 
+}
+
+void Font::debugPrintSegments() const
+{
+    for (size_t i = 0; i < m_segCount; ++i)
+        std::cout << "seg " << i
+        << " : [" << readU16(m_startCodeAddr + 2 * i)
+        << " .. " << readU16(m_endCodeAddr + 2 * i) << "]"
+        << " delta=" << readI16(m_idDeltaAddr + 2 * i)
+        << " rangeOffset=" << readU16(m_idRangeOffsetAddr + 2 * i)
+        << "\n";
+}
+
+void Font::parseCmapSegments()
+{
+    size_t segCountX2 = readU16(m_cmapSubtable + 6);
+    m_segCount = segCountX2 / 2;
+
+
+    m_endCodeAddr = m_cmapSubtable + 14 ; 
+    m_startCodeAddr = (m_endCodeAddr + segCountX2)+2;    // taille d'un tableau + padding
+    m_idDeltaAddr = m_startCodeAddr + segCountX2;  // taille d'un tableau
+    m_idRangeOffsetAddr = m_idDeltaAddr + segCountX2;    // taille d'un tableau
+
+
+}
+
+
+uint16_t Font::getGlyphIndex(uint32_t codepoint) const
+{
+    // 0. hors BMP, ou 0xFFFF (segment terminal) : pas de glyphe
+    if (codepoint >= 0xFFFF)
+        return 0;
+
+    for (size_t i = 0; i < m_segCount; ++i)
+    {
+        // 1. segment trop bas : on passe au suivant
+        if (codepoint > readU16(m_endCodeAddr + 2 * i))
+            continue;
+
+        // 2. on est dans le premier segment dont end >= codepoint
+        uint16_t start = readU16(m_startCodeAddr + 2 * i);
+        if (codepoint < start)
+            return 0;                       // trou entre deux segments
+
+        // 3. les deux autres valeurs du segment
+        uint16_t delta = readU16(m_idDeltaAddr + 2 * i);
+        size_t   rangeAddr = m_idRangeOffsetAddr + 2 * i;
+        uint16_t range = readU16(rangeAddr);
+
+        // 4. raccourci : pas de glyphIdArray
+        if (range == 0)
+            return static_cast<uint16_t>((codepoint + delta) & 0xFFFF);
+
+        // 5. lecture dans glyphIdArray, adresse relative à la case idRangeOffset[i]
+        size_t addr = rangeAddr + range + 2 * (codepoint - start);
+        if (addr + 1 >= m_data.size())
+            return 0;
+
+        uint16_t glyph = readU16(addr);
+        if (glyph == 0)
+            return 0;
+
+        return static_cast<uint16_t>((glyph + delta) & 0xFFFF);
+    }
+    return 0;
 }
