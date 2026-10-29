@@ -110,6 +110,7 @@ static void BuildTiles()
 {
 	tiles.clear();
 	tilesY = (HEIGHT + TILE_SIZE - 1) / TILE_SIZE;
+	tilesX = (WIDTH + TILE_SIZE - 1) / TILE_SIZE;
 	for (int ty = 0; ty < tilesY; ty++)
 		for (int tx = 0; tx < tilesX; tx++)
 			tiles.push_back({
@@ -207,7 +208,7 @@ static void RasterizeTriInTile(const ScreenTri& t, const Tile& tile)
 #if BILINEAR
 			uint32_t texel = tex->sampleBilinear(u, v);
 #else
-			uint32_t texel = g_tex->sample(u, v);
+			uint32_t texel = tex->sample(u, v);
 #endif
 			zbuffer[idx] = z;
 			framebuffer[idx] = color_phong(texel, diffuse_k, spec_k);
