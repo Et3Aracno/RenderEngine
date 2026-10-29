@@ -1,6 +1,5 @@
 #pragma once
 #include <array>
-
 template <typename T>
 class ComponentManager
 {
@@ -8,7 +7,6 @@ private:
 
 	const std::array<T, 100> componentStorage;
 	const std::array<bool, 100> hasComponentArray;
-
 
 
 public:

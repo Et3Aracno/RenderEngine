@@ -58,6 +58,18 @@
     <Filter Include="src\Renderer">
       <UniqueIdentifier>{54e9a0c9-de61-4d40-b38f-4ab7f0fd0c91}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\EntityManager">
+      <UniqueIdentifier>{ba0345c2-6f9e-469f-a7df-b38c20b8d369}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Headers\EntityManager">
+      <UniqueIdentifier>{a0ee3993-3e37-4e66-8f1e-a194f7582274}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Headers\Component">
+      <UniqueIdentifier>{39733ed4-8775-42e7-a6a8-56b84fe76d32}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\Component">
+      <UniqueIdentifier>{ca146e3c-05be-46fe-832e-78350cfb8c2c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -84,6 +96,12 @@
     <ClCompile Include="Renderer.cpp">
       <Filter>src\Renderer</Filter>
     </ClCompile>
+    <ClCompile Include="EntityManager.cpp">
+      <Filter>src\EntityManager</Filter>
+    </ClCompile>
+    <ClCompile Include="ComponentManager.inl">
+      <Filter>src\Component</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="EditorCore.h">
@@ -109,6 +127,12 @@
     </ClInclude>
     <ClInclude Include="Renderer.h">
       <Filter>Headers\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="EntityManager.h">
+      <Filter>Headers\EntityManager</Filter>
+    </ClInclude>
+    <ClInclude Include="ComponentManager.h">
+      <Filter>Headers\Component</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

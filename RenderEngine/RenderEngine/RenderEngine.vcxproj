@@ -143,7 +143,9 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Color.cpp" />
+    <ClCompile Include="ComponentManager.inl" />
     <ClCompile Include="EditorCore.cpp" />
+    <ClCompile Include="EntityManager.cpp" />
     <ClCompile Include="Font.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Material.cpp" />
@@ -154,7 +156,9 @@
   <ItemGroup>
     <ClInclude Include="clip.h" />
     <ClInclude Include="Color.h" />
+    <ClInclude Include="ComponentManager.h" />
     <ClInclude Include="EditorCore.h" />
+    <ClInclude Include="EntityManager.h" />
     <ClInclude Include="Font.h" />
     <ClInclude Include="Material.h" />
     <ClInclude Include="MeshRLoader.h" />
