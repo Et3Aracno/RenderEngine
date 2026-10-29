@@ -1,4 +1,7 @@
 #pragma once
+#include "Vec4S.h"
+
+
 
 inline __m128 Maths::Vec4S::Load(const Maths::Vec4S& v)
 {
@@ -290,11 +293,11 @@ inline Maths::Vec4S Maths::Vec4S::Max(const Maths::Vec4S& a, const Maths::Vec4S&
 	return Store(_mm_max_ps(va, vb));
 }
 
-//inline Maths::Vec4S Maths::Vec4S::FromPoint(Maths::Vec3S p)
-//{
-//	__m128 v = _mm_setr_ps(p.x, p.y, p.z, 1.0f );
-//	return Store(v);
-//}
+inline Maths::Vec4S Maths::Vec4S::FromPoint(Maths::Vec3S p)
+{
+	__m128 v = _mm_setr_ps(p.x, p.y, p.z, 1.0f );
+	return Store(v);
+}
 
 inline const Maths::Vec4S Maths::Vec4S::Zero{ 0, 0, 0, 0 };
 
