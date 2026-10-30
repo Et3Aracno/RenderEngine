@@ -35,6 +35,7 @@ struct ScreenTri {
 struct Tile { int x0, y0, x1, y1; };
 
 
+
 class Renderer {
 
 private:
@@ -48,15 +49,16 @@ private:
 	static Renderer* r_instance;
 	GLFWwindow* window = nullptr;
 
-	static std::vector<std::thread> threads;
-	static std::unique_ptr<std::barrier<>> startBarrier;
-	static std::unique_ptr<std::barrier<>> endBarrier;
-	static std::atomic<int> nextTile{ 0 };
-	static std::atomic<bool> quit{ false };
+	static inline std::vector<std::thread> threads;
+	static inline std::unique_ptr<std::barrier<>> startBarrier;
+	static inline std::unique_ptr<std::barrier<>> endBarrier;
+	static inline std::atomic<int> nextTile{ 0 };
+	static inline std::atomic<bool> quit{ false };
+	
 
-	static std::vector<Tile> tiles;
-	static std::vector<ScreenTri> tris;
-	static int tilesX, tilesY;
+	static inline std::vector<Tile> tiles;
+	static inline std::vector<ScreenTri> tris;
+	static inline int tilesX, tilesY;
 
 	//
 
@@ -69,18 +71,18 @@ private:
 	static void compute_face_normals(const Mesh* mesh, Maths::Vec3S* out);
 	static void compute_vertex_normals(const Mesh* mesh, const Maths::Vec3S* face_normals, Maths::Vec3S* out);
 
-	static void StartThreadPool();
+	static void StartThreadPool(const Material* mat);
 	static void StopThreadPool();
-	static void WorkerLoop();
+	static void WorkerLoop(const Material* mat);
 
 protected:
 
 	static void BuildTiles(); // Done once or window changes size
-	static void RenderTile(int tileIndex);
-	static inline void ProcessTiles();
-	static void RenderAllTiles();
+	static void RenderTile(int tileIndex, const Material* mat);
+	static inline void ProcessTiles(const Material* mat);
+	static void RenderAllTiles(const Material* mat);
 
-	static void drawMeshTextured(const Mesh& mesh, const Maths::Matrix4x4SIMD& mvp, Maths::Matrix4x4SIMD model, Maths::Vec3S* face_normals, Maths::Vec3S* vertex_normals);
+	static void drawMeshTextured(const Mesh& mesh, const Maths::Matrix4x4SIMD& mvp, Maths::Matrix4x4SIMD model, Maths::Vec3S* face_normals, Maths::Vec3S* vertex_normals, const Material* mat);
 	static void project(const ClipVertex* tri);
 	void drawPx(int sizeX, int sizeY);
 	static inline void put_pixel(int x, int y, Color color);
@@ -111,11 +113,5 @@ public:
 	Color GetBcColor() const { return defaultBcColor; }
 	void SetBcColor(Color color) { defaultBcColor = color; }
 	static constexpr int GetSizeWxH() { return SizeWxH; }
-
-
-
-
-
-
 
 };

@@ -142,7 +142,7 @@ void Renderer::BuildTiles() {
 }
 
 // clear + rasterize
-void Renderer::RenderTile(int tileIndex)
+void Renderer::RenderTile(int tileIndex, const Material* mat)
 {
 	const Tile& tile = tiles[tileIndex];
 
@@ -153,36 +153,36 @@ void Renderer::RenderTile(int tileIndex)
 
 	// si pas ds boxTile dégage
 	for (const ScreenTri& tri : tris)
-		RasterizeTri(tri, tile);
+		RasterizeTri(tri, tile, mat);
 }
 
-void Renderer::ProcessTiles()
+void Renderer::ProcessTiles(const Material* mat)
 {
 	int t;
 	while ((t = nextTile.fetch_add(1)) < (int)tiles.size())
-		RenderTile(t);
+		RenderTile(t, mat);
 }
 
-void Renderer::RenderAllTiles()
+void Renderer::RenderAllTiles(const Material* mat)
 {
 	nextTile = 0;
 	startBarrier->arrive_and_wait();
-	ProcessTiles();
+	ProcessTiles(mat);
 	endBarrier->arrive_and_wait();
 }
 
-void Renderer::WorkerLoop()
+void Renderer::WorkerLoop(const Material* mat)
 {
 	for (;;) {
 		startBarrier->arrive_and_wait();
 		if (quit.load()) return;
-		ProcessTiles();
+		ProcessTiles(mat);
 		endBarrier->arrive_and_wait();
 	}
 }
 
 
-void Renderer::StartThreadPool()
+void Renderer::StartThreadPool(const Material* mat)
 {
 	int nbT = (int)std::thread::hardware_concurrency();
 	if (nbT < 1) nbT = 1;
@@ -191,7 +191,7 @@ void Renderer::StartThreadPool()
 	startBarrier = std::make_unique<std::barrier<>>(workers + 1);
 	endBarrier = std::make_unique<std::barrier<>>(workers + 1);
 	for (int i = 0; i < workers; i++)
-		threads.emplace_back(WorkerLoop);
+		threads.emplace_back(WorkerLoop, mat);
 }
 
 void Renderer::StopThreadPool()
@@ -216,9 +216,9 @@ inline void Renderer::RasterizeTri(const ScreenTri& t, const Tile& tile, const M
 
 	for (int y = miny; y <= maxy; y++) {
 		for (int x = minx; x <= maxx; x++) {
-			int e0 = edge(Maths::Vec2S{t.x[1], t.y[1]}, Maths::Vec2S{t.x[2], t.y[2]}, Maths::Vec2S{x, y});
-			int e1 = edge(Maths::Vec2S{t.x[2], t.y[2]}, Maths::Vec2S{t.x[0], t.y[0]}, Maths::Vec2S{x, y});
-			int e2 = edge(Maths::Vec2S{t.x[0], t.y[0]}, Maths::Vec2S{t.x[1], t.y[1]}, Maths::Vec2S{x, y});
+			int e0 = edge(Maths::Vec2S{(float)t.x[1], (float)t.y[1]}, Maths::Vec2S{(float)t.x[2], (float)t.y[2]}, Maths::Vec2S{(float)x, (float)y});
+			int e1 = edge(Maths::Vec2S{(float)t.x[2], (float)t.y[2]}, Maths::Vec2S{(float)t.x[0], (float)t.y[0]}, Maths::Vec2S{(float)x, (float)y});
+			int e2 = edge(Maths::Vec2S{(float)t.x[0], (float)t.y[0]}, Maths::Vec2S{(float)t.x[1], (float)t.y[1]}, Maths::Vec2S{(float)x, (float)y});
 			if ((e0 | e1 | e2) < 0) continue;
 
 			float l0 = e0 * t.invArea;
@@ -301,7 +301,7 @@ inline void Renderer::project(const ClipVertex* tri) {
 }
 
 
- void Renderer::drawMeshTextured(const Mesh& mesh, const Maths::Matrix4x4SIMD& mvp, Maths::Matrix4x4SIMD model, Maths::Vec3S* face_normals, Maths::Vec3S* vertex_normals)
+ void Renderer::drawMeshTextured(const Mesh& mesh, const Maths::Matrix4x4SIMD& mvp, Maths::Matrix4x4SIMD model, Maths::Vec3S* face_normals, Maths::Vec3S* vertex_normals, const Material* mat)
 {
 	const int vcount = (int)mesh.verts.size();
 
@@ -312,6 +312,8 @@ inline void Renderer::project(const ClipVertex* tri) {
 		clipV[i] = mvp.operator*(Maths::Vec4S::FromPoint(mesh.verts[i]));
 		normalWorld[i] = model * vertex_normals[i];
 	}
+
+	tris.clear();
 
 	// Étape 2 : par triangle -> clipping, puis projection + dessin
 	for (int fidx = 0; fidx < (int)mesh.faces.size() / 3; fidx++) {
@@ -338,7 +340,7 @@ inline void Renderer::project(const ClipVertex* tri) {
 		for (int t = 0; t < nTris; t++)
 			project(&out[t * 3]);
 	}
-	RenderAllTiles();
+	RenderAllTiles(mat);
 }
 
 
@@ -405,7 +407,7 @@ void Renderer::update()
 	glfwMakeContextCurrent(window);
 
 	BuildTiles();
-	StartThreadPool();
+	StartThreadPool(&material);
 
 	double lastTime = glfwGetTime();
 	int frameCount = 0;
@@ -420,7 +422,7 @@ void Renderer::update()
 		Maths::Matrix4x4SIMD model = Maths::Matrix4x4SIMD::RotationY(angle * 0.7f);
 		Maths::Matrix4x4SIMD mvp = projection * view * model;
 
-		drawMeshTextured(mesh, mvp, model, face_normals, vertex_normals);
+		drawMeshTextured(mesh, mvp, model, face_normals, vertex_normals, &material);
 
 		glDrawPixels(defaultWidth, defaultHeight, GL_RGBA, GL_UNSIGNED_BYTE, framebuffer);
 		glfwSwapBuffers(window);
