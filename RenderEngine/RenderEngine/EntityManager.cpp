@@ -10,7 +10,7 @@ EntityManager::~EntityManager()
 }
 
 
-void EntityManager::addComponenet(int managerIndex, int componentIndex)
+void EntityManager::addComponent(int managerIndex, int componentIndex)
 {
 	//static_cast<T*>(componentManagers[managerIndex]);
 	componentManagers[managerIndex]->addComponent(componentIndex, ));

@@ -17,7 +17,7 @@ public:
 
 	template <typename T>
 	int createManager();
-	void addComponenet(int managerIndex, int componentIndex);
+	void addComponent(int managerIndex, int componentIndex);
 	void*& getComponent(int managerIndex , int componentIndex);
 	bool hasComponent(int managerIndex, int componentIndex) const ;
 
