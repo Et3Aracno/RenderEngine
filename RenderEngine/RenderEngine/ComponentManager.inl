@@ -1,19 +1,19 @@
+#pragma once
 #include "ComponentManager.h"
 
-
 template<typename T>
-inline void ComponentManager<T>::addComponent(int entity, T& value)
+inline void ComponentManager<T>::addComponent(int entity, void*& value)
 {
 	assert(entity >= 0 && entity < 100);
-	GetcomponentStorage()[entity] = value;
-	GethasComponentArray()[entity] = true;
+	componentStorage[entity] = value;
+	hasComponentArray[entity] = true;
 }
 
 template<typename T>
-inline T& ComponentManager<T>::GetComponent(int entity)
+inline void*& ComponentManager<T>::getComponent(int entity)
 {
 	assert(hasComponent(entity) && "No component at index");
-	return GetcomponentStorage().at(entity);
+	return componentStorage[entity];
 }
 
 template <typename T>
