@@ -26,7 +26,7 @@ bool Font::loadFont(const std::string& path)
 
 uint16_t Font::readU16(size_t offset) const
 {
-    return m_data[offset] << 8 | m_data[offset+1];
+    return static_cast<uint16_t>((m_data[offset] << 8) | m_data[offset + 1]);
 }
 
 int16_t  Font::readI16(size_t offset) const
@@ -159,12 +159,13 @@ bool Font::parseCmap()
 
         size_t cmapAbsoluteloc = base + offset;
         size_t U16format = readU16(cmapAbsoluteloc);
-        if (U16format != 4)
+        if (U16format != 4) {
             std::cerr << "Wrong address\n";
-
+            continue;
+        }
         m_cmapSubtable = cmapAbsoluteloc;
         parseCmapSegments();
-        debugPrintSegments();
+  
 
 
         return true;
@@ -177,16 +178,7 @@ bool Font::parseCmap()
 
 }
 
-void Font::debugPrintSegments() const
-{
-    for (size_t i = 0; i < m_segCount; ++i)
-        std::cout << "seg " << i
-        << " : [" << readU16(m_startCodeAddr + 2 * i)
-        << " .. " << readU16(m_endCodeAddr + 2 * i) << "]"
-        << " delta=" << readI16(m_idDeltaAddr + 2 * i)
-        << " rangeOffset=" << readU16(m_idRangeOffsetAddr + 2 * i)
-        << "\n";
-}
+
 
 void Font::parseCmapSegments()
 {
@@ -194,14 +186,12 @@ void Font::parseCmapSegments()
     m_segCount = segCountX2 / 2;
 
 
-    m_endCodeAddr = m_cmapSubtable + 14 ; 
-    m_startCodeAddr = (m_endCodeAddr + segCountX2)+2;    // taille d'un tableau + padding
+    m_endCodeAddr = m_cmapSubtable + 14;
+    m_startCodeAddr = (m_endCodeAddr + segCountX2) + 2;    // taille d'un tableau + padding
     m_idDeltaAddr = m_startCodeAddr + segCountX2;  // taille d'un tableau
     m_idRangeOffsetAddr = m_idDeltaAddr + segCountX2;    // taille d'un tableau
 
-
 }
-
 
 uint16_t Font::getGlyphIndex(uint32_t codepoint) const
 {
@@ -241,4 +231,61 @@ uint16_t Font::getGlyphIndex(uint32_t codepoint) const
         return static_cast<uint16_t>((glyph + delta) & 0xFFFF);
     }
     return 0;
+}
+
+
+
+
+bool Font::getGlyphLocation(uint16_t glyphIndex, size_t& offset, size_t& length) const
+{
+    if (glyphIndex >= m_numGlyphs)
+        return false;
+
+ 
+    auto loca = m_tables.find("loca");
+    auto glyf = m_tables.find("glyf");
+    if (loca == m_tables.end() || glyf == m_tables.end())
+        return false;
+
+
+    size_t locaBase = loca->second.offset;
+    size_t glyfBase = glyf->second.offset;
+
+
+    size_t start = 0;
+    size_t end = 0;
+
+    if (m_indexToLocFormat == 0)
+    {
+        //uint16 * 2
+        size_t entrySize = 2;
+        if ((glyphIndex + 2) * entrySize > loca->second.length)
+            return false;
+
+        start = static_cast<size_t>(readU16(locaBase + 2 * glyphIndex)) * 2;
+        end = static_cast<size_t>(readU16(locaBase + 2 * (glyphIndex + 1))) * 2;
+    }
+    else
+    {
+        //uint32
+        size_t entrySize = 4;
+        if ((static_cast<size_t>(glyphIndex) + 2) * entrySize > loca->second.length)
+            return false;
+
+        start = readU32(locaBase + 4 * glyphIndex);
+        end = readU32(locaBase + 4 * (glyphIndex + 1));
+    }
+
+    // 4. longueur
+    if (end <= start)
+        return false;       
+
+    length = end - start;
+
+    // 5. le glyphe doit tenir dans la table glyf
+    if (end > glyf->second.length)
+        return false;
+
+    offset = glyfBase + start;
+    return true;
 }
