@@ -157,6 +157,7 @@
     <ClInclude Include="clip.h" />
     <ClInclude Include="Color.h" />
     <ClInclude Include="ComponentManager.h" />
+    <ClInclude Include="ECS.h" />
     <ClInclude Include="EditorCore.h" />
     <ClInclude Include="EntityManager.h" />
     <ClInclude Include="Font.h" />
@@ -164,6 +165,9 @@
     <ClInclude Include="MeshRLoader.h" />
     <ClInclude Include="Renderer.h" />
     <ClInclude Include="Texture.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="EntityManager.inl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
