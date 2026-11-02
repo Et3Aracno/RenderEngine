@@ -49,7 +49,7 @@ bool Font::parseTableDirectory()
     m_tables.clear();
 
     uint32_t version = readU32(0);
-    if (version != 0x00010000 && version != 0x74727565) {
+	if (version != 0x00010000 && version != 0x74727565) { // 0x74727565 = 'true' pour les collections de polices en ASCII, et 0x00010000 = version classique du format TTF
         throw std::runtime_error("please load a ttf file");
     }
 
@@ -65,7 +65,7 @@ bool Font::parseTableDirectory()
 
         TableInfo info;
         info.offset = readU32(pos + 8);   // +4 est le checksum, ignoré
-        info.length = readU32(pos + 12);
+        info.length = readU32(pos + 12);  
 
         // Chaque table doit tenir dans le fichier
         if (static_cast<size_t>(info.offset) + info.length > m_data.size())
@@ -250,8 +250,6 @@ bool Font::getGlyphLocation(uint16_t glyphIndex, size_t& offset, size_t& length)
 
     size_t locaBase = loca->second.offset;
     size_t glyfBase = glyf->second.offset;
-
-
     size_t start = 0;
     size_t end = 0;
 

@@ -303,6 +303,7 @@ void Renderer::update()
 	Font font;
 	font.loadFont("assets/SIXTY.TTF");
 
+
 	Mesh mesh;
 	MeshLoader::loadMesh("assets/spot.obj", mesh);
 

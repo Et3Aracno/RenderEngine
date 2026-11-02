@@ -17,7 +17,9 @@ private:
 
 protected:
     bool parseCmap();
-    size_t m_cmapSubtable = 0;   // adresse absolue (dans m_data) de la sous-table format 4
+    size_t m_cmapSubtable = 0;     // adresse absolue (dans m_data) de la sous-table format 4
+    
+
     struct TableInfo
     {
         uint32_t offset;
