@@ -71,25 +71,25 @@ private:
 	static void compute_face_normals(const Mesh* mesh, Maths::Vec3S* out);
 	static void compute_vertex_normals(const Mesh* mesh, const Maths::Vec3S* face_normals, Maths::Vec3S* out);
 
-	static void StartThreadPool(const Material* mat);
+	static void StartThreadPool(const Material& mat);
 	static void StopThreadPool();
-	static void WorkerLoop(const Material* mat);
+	static void WorkerLoop(const Material& mat);
 
 protected:
 
 	static void BuildTiles(); // Done once or window changes size
-	static void RenderTile(int tileIndex, const Material* mat);
-	static inline void ProcessTiles(const Material* mat);
-	static void RenderAllTiles(const Material* mat);
+	static void RenderTile(int tileIndex, const Material& mat);
+	static inline void ProcessTiles(const Material& mat);
+	static void RenderAllTiles(const Material& mat);
 
-	static void drawMeshTextured(const Mesh& mesh, const Maths::Matrix4x4SIMD& mvp, Maths::Matrix4x4SIMD model, Maths::Vec3S* face_normals, Maths::Vec3S* vertex_normals, const Material* mat);
+	static void drawMeshTextured(const Mesh& mesh, const Maths::Matrix4x4SIMD& mvp, Maths::Matrix4x4SIMD model, Maths::Vec3S* face_normals, Maths::Vec3S* vertex_normals, const Material& mat);
 	static void project(const ClipVertex* tri);
 	void drawPx(int sizeX, int sizeY);
 	static inline void put_pixel(int x, int y, Color color);
 	static void draw_line(Maths::Vec2S x , Maths::Vec2S y, uint32_t color);
-	void clearAllBuffer(); 
+	void clearAllBuffer();
 
-	static void RasterizeTri(const ScreenTri& t, const Tile& tile, const Material* mat);
+	static void RasterizeTri(const ScreenTri& t, const Tile& tile, const Material& mat);
 
 
 public:

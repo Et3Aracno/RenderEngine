@@ -142,7 +142,7 @@ void Renderer::BuildTiles() {
 }
 
 // clear + rasterize
-void Renderer::RenderTile(int tileIndex, const Material* mat)
+void Renderer::RenderTile(int tileIndex, const Material& mat)
 {
 	const Tile& tile = tiles[tileIndex];
 
@@ -156,14 +156,14 @@ void Renderer::RenderTile(int tileIndex, const Material* mat)
 		RasterizeTri(tri, tile, mat);
 }
 
-void Renderer::ProcessTiles(const Material* mat)
+void Renderer::ProcessTiles(const Material& mat)
 {
 	int t;
 	while ((t = nextTile.fetch_add(1)) < (int)tiles.size())
 		RenderTile(t, mat);
 }
 
-void Renderer::RenderAllTiles(const Material* mat)
+void Renderer::RenderAllTiles(const Material& mat)
 {
 	nextTile = 0;
 	startBarrier->arrive_and_wait();
@@ -171,7 +171,7 @@ void Renderer::RenderAllTiles(const Material* mat)
 	endBarrier->arrive_and_wait();
 }
 
-void Renderer::WorkerLoop(const Material* mat)
+void Renderer::WorkerLoop(const Material& mat)
 {
 	for (;;) {
 		startBarrier->arrive_and_wait();
@@ -182,7 +182,7 @@ void Renderer::WorkerLoop(const Material* mat)
 }
 
 
-void Renderer::StartThreadPool(const Material* mat)
+void Renderer::StartThreadPool(const Material& mat)
 {
 	int nbT = (int)std::thread::hardware_concurrency();
 	if (nbT < 1) nbT = 1;
@@ -202,7 +202,7 @@ void Renderer::StopThreadPool()
 	threads.clear();
 }
 
-inline void Renderer::RasterizeTri(const ScreenTri& t, const Tile& tile, const Material* mat) {
+inline void Renderer::RasterizeTri(const ScreenTri& t, const Tile& tile, const Material& mat) {
 
 	int minx = std::max(t.minx, tile.x0);
 	int maxx = std::min(t.maxx, tile.x1 - 1);
@@ -250,11 +250,11 @@ inline void Renderer::RasterizeTri(const ScreenTri& t, const Tile& tile, const M
 			float ndoth = N.Dot(half_vec);
 			if (ndoth < 0.0f) ndoth = 0.0f;
 
-			uint32_t src = mat->Shade(u, v, ndotl, ndoth);
+			uint32_t src = mat.Shade(u, v, ndotl, ndoth);
 			uint32_t dst = framebuffer[idx];
 
 			zbuffer[idx] = z;
-			framebuffer[idx] = mat->rdPass(src, dst);
+			framebuffer[idx] = mat.rdPass(src, dst);
 		}
 	}
 }
@@ -301,7 +301,7 @@ inline void Renderer::project(const ClipVertex* tri) {
 }
 
 
- void Renderer::drawMeshTextured(const Mesh& mesh, const Maths::Matrix4x4SIMD& mvp, Maths::Matrix4x4SIMD model, Maths::Vec3S* face_normals, Maths::Vec3S* vertex_normals, const Material* mat)
+ void Renderer::drawMeshTextured(const Mesh& mesh, const Maths::Matrix4x4SIMD& mvp, Maths::Matrix4x4SIMD model, Maths::Vec3S* face_normals, Maths::Vec3S* vertex_normals, const Material& mat)
 {
 	const int vcount = (int)mesh.verts.size();
 
@@ -407,7 +407,7 @@ void Renderer::update()
 	glfwMakeContextCurrent(window);
 
 	BuildTiles();
-	StartThreadPool(&material);
+	StartThreadPool(material);
 
 	double lastTime = glfwGetTime();
 	int frameCount = 0;
@@ -422,7 +422,7 @@ void Renderer::update()
 		Maths::Matrix4x4SIMD model = Maths::Matrix4x4SIMD::RotationY(angle * 0.7f);
 		Maths::Matrix4x4SIMD mvp = projection * view * model;
 
-		drawMeshTextured(mesh, mvp, model, face_normals, vertex_normals, &material);
+		drawMeshTextured(mesh, mvp, model, face_normals, vertex_normals, material);
 
 		glDrawPixels(defaultWidth, defaultHeight, GL_RGBA, GL_UNSIGNED_BYTE, framebuffer);
 		glfwSwapBuffers(window);
