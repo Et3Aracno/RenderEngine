@@ -26,10 +26,10 @@ void Color::setRgb(uint8_t a, uint8_t b, uint8_t g, uint8_t r) {
 static inline uint32_t color_scale(uint32_t c, float k) {
     if (k < 0.0f) k = 0.0f;
     if (k > 1.0f) k = 1.0f;
-    const uint8_t sk = k;
-    uint32_t r = (c >> 16) * sk;
-    uint32_t g = (c >> 8) * sk;
-    uint32_t b = (c * sk);
+    const uint8_t sk = static_cast<uint8_t>(k);
+    uint32_t r = static_cast<uint32_t>((c >> 16) * sk);
+    uint32_t g = static_cast<uint32_t>((c >> 8) * sk);
+    uint32_t b = static_cast<uint32_t>((c * sk));
     return ((uint32_t)0xFFu << 24) | (r << 16) | (g << 8) | b;
 }
 

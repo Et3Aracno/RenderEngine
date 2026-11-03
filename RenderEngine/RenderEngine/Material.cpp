@@ -24,12 +24,9 @@ uint32_t Material::rdPass(uint32_t src, uint32_t dst) const
     const float invAlpha = 1.0f - alpha;
 
 
-    uint8_t r = alpha * csrc.r() + invAlpha * cdst.r();
-    uint8_t rt = alpha * src + invAlpha * dst;
-    uint8_t g = alpha * csrc.g() + invAlpha * cdst.g();
-    uint8_t gt = alpha * (src << 16) + invAlpha * (dst << 16);
-    uint8_t b = alpha * csrc.b() + invAlpha * cdst.b();
-    uint8_t bt = alpha * (src << 24) + invAlpha * (dst << 24);
+    uint8_t r = (uint8_t)(alpha * csrc.r() + invAlpha * cdst.r() + 0.5f);
+    uint8_t g = (uint8_t)(alpha * csrc.g() + invAlpha * cdst.g() + 0.5f);
+    uint8_t b = (uint8_t)(alpha * csrc.b() + invAlpha * cdst.b() + 0.5f);
 
 	return 0xFF000000u | (b << 16) | (g << 8) | r;
 }
@@ -52,7 +49,7 @@ uint32_t Material::Shade(float u, float v, float ndotl, float ndoth) const {
     uint32_t r = shade_channel(texel, 0, diffuse_k, spec_k, metallic);
     uint32_t g = shade_channel(texel, 8, diffuse_k, spec_k, metallic);
     uint32_t b = shade_channel(texel, 16, diffuse_k, spec_k, metallic);
-    uint32_t a = alpha * 255.0f + 0.5f;
+    uint32_t a = static_cast<uint32_t>(alpha * 255.0f + 0.5f);
 
     return (a<<24) | (b << 16) | (g << 8) | r;
 }
