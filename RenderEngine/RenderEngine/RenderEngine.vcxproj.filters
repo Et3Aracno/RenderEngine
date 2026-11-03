@@ -93,6 +93,9 @@
     <ClCompile Include="ParticleSystem.cpp">
       <Filter>src\ParticuleSystem</Filter>
     </ClCompile>
+    <ClCompile Include="Emitter.cpp">
+      <Filter>src\ParticuleSystem</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="EditorCore.h">
@@ -119,8 +122,11 @@
     <ClInclude Include="Renderer.h">
       <Filter>Headers\Renderer</Filter>
     </ClInclude>
-    <ClInclude Include="ParticleSystem.h">
+    <ClInclude Include="Emitter.h">
       <Filter>Headers\ParticuleSystem</Filter>
+    </ClInclude>
+    <ClInclude Include="ParticleSystem.h">
+      <Filter>Headers\Renderer</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

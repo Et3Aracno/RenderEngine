@@ -144,6 +144,7 @@
   <ItemGroup>
     <ClCompile Include="Color.cpp" />
     <ClCompile Include="EditorCore.cpp" />
+    <ClCompile Include="Emitter.cpp" />
     <ClCompile Include="Font.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Material.cpp" />
@@ -156,6 +157,7 @@
     <ClInclude Include="clip.h" />
     <ClInclude Include="Color.h" />
     <ClInclude Include="EditorCore.h" />
+    <ClInclude Include="Emitter.h" />
     <ClInclude Include="Font.h" />
     <ClInclude Include="Material.h" />
     <ClInclude Include="MeshRLoader.h" />

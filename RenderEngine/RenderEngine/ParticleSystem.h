@@ -31,6 +31,7 @@ public:
 	void SetNext(Particle* next) { Next = next; };
 };
 
+
 class ParticlePool {
 	int poolSize = 0;
 	Particle* FirstAvailable = nullptr;
@@ -43,6 +44,8 @@ public:
 	void Generate();
 	bool update(float dt, const Material& mat);
 };
+
+
 
 class ParticleSystem{
 	ParticlePool pool;
