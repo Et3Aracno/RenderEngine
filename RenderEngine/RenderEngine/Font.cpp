@@ -164,10 +164,8 @@ bool Font::parseCmap()
             continue;
         }
         m_cmapSubtable = cmapAbsoluteloc;
+        
         parseCmapSegments();
-  
-
-
         return true;
     }
 

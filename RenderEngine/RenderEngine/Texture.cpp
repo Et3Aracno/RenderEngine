@@ -62,8 +62,8 @@ uint32_t Texture::sample(float u, float v) const
     v -= std::floor(v);
 
     // Plus proche voisin, avec flip de V (OBJ en bas, image en haut)
-    int x = (u * width);
-    int y = ((1.0f - v) * height);
+    int x = static_cast<int>(u * width);
+    int y = static_cast<int>((1.0f - v) * height);
 
     // u ou v peuvent valoir exactement 1.0 après l'arrondi flottant
     x = std::clamp(x, 0, width - 1);
@@ -86,15 +86,15 @@ uint32_t Texture::sampleBilinear(float u, float v) const
     float fx = u * width - 0.5f;
     float fy = (1.0f - v) * (float)height - 0.5f;
 
-    int x0 = std::floor(fx);
-    int y0 = std::floor(fy);
+    int x0 = static_cast<int>(std::floor(fx));
+    int y0 = static_cast<int>(std::floor(fy));
     float tx = fx - x0;   // partie fractionnaire = poids horizontal
     float ty = fy - y0;   // partie fractionnaire = poids vertical
 
     // Les 4 texels voisins, avec wrap aux bords
     auto wrap = [](int i, int n) { return ((i % n) + n) % n; };
-    int xa = wrap(x0, width), xb = wrap(x0 + 1, width);
-    int ya = wrap(y0, height), yb = wrap(y0 + 1, height);
+    int xa = static_cast<int>(wrap(x0, width)), xb = static_cast<int>(wrap(x0 + 1, width));
+    int ya = static_cast<int>(wrap(y0, height)), yb = static_cast<int>(wrap(y0 + 1, height));
 
     uint32_t c00 = pixels[(size_t)ya * width + xa];
     uint32_t c10 = pixels[(size_t)ya * width + xb];
