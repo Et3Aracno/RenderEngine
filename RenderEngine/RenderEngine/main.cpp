@@ -24,5 +24,5 @@ int main()
 		});
 
 	ecs.executeSystems();                                     
+	return 0;
 }
-
