@@ -58,6 +58,12 @@
     <Filter Include="src\Renderer">
       <UniqueIdentifier>{54e9a0c9-de61-4d40-b38f-4ab7f0fd0c91}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Headers\ParticuleSystem">
+      <UniqueIdentifier>{dce017cf-ae14-4729-9959-46dac50d32b5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\ParticuleSystem">
+      <UniqueIdentifier>{7488103a-603e-4788-bf70-f7edafac3e9a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -84,6 +90,9 @@
     <ClCompile Include="Renderer.cpp">
       <Filter>src\Renderer</Filter>
     </ClCompile>
+    <ClCompile Include="ParticleSystem.cpp">
+      <Filter>src\ParticuleSystem</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="EditorCore.h">
@@ -109,6 +118,9 @@
     </ClInclude>
     <ClInclude Include="Renderer.h">
       <Filter>Headers\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="ParticleSystem.h">
+      <Filter>Headers\ParticuleSystem</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
