@@ -37,7 +37,7 @@ bool Texture::load(const std::string& path)
 
     width = w;
     height = h;
-    pixels.resize((size_t)w * (size_t)h);
+    pixels.resize(static_cast<size_t>(w) * static_cast<size_t>(h));
 
     
     for (size_t i = 0; i < pixels.size(); i++)
@@ -69,7 +69,7 @@ uint32_t Texture::sample(float u, float v) const
     x = std::clamp(x, 0, width - 1);
     y = std::clamp(y, 0, height - 1);
 
-    return pixels[(size_t)y * width + x];
+    return pixels[static_cast<size_t>(y) * width + x];
 }
 
 
@@ -84,22 +84,26 @@ uint32_t Texture::sampleBilinear(float u, float v) const
     // Position en coordonnées texel. Le -0.5 décale vers les CENTRES des texels :
     // sans ça, l'image serait décalée d'un demi-texel.
     float fx = u * width - 0.5f;
-    float fy = (1.0f - v) * (float)height - 0.5f;
+    float fy = (1.0f - v) * static_cast<float>(height) - 0.5f;
 
     int x0 = static_cast<int>(std::floor(fx));
     int y0 = static_cast<int>(std::floor(fy));
+
     float tx = fx - x0;   // partie fractionnaire = poids horizontal
     float ty = fy - y0;   // partie fractionnaire = poids vertical
 
     // Les 4 texels voisins, avec wrap aux bords
     auto wrap = [](int i, int n) { return ((i % n) + n) % n; };
-    int xa = static_cast<int>(wrap(x0, width)), xb = static_cast<int>(wrap(x0 + 1, width));
-    int ya = static_cast<int>(wrap(y0, height)), yb = static_cast<int>(wrap(y0 + 1, height));
 
-    uint32_t c00 = pixels[(size_t)ya * width + xa];
-    uint32_t c10 = pixels[(size_t)ya * width + xb];
-    uint32_t c01 = pixels[(size_t)yb * width + xa];
-    uint32_t c11 = pixels[(size_t)yb * width + xb];
+    int xa = static_cast<int>(wrap(x0, width)), 
+        xb = static_cast<int>(wrap(x0 + 1, width)),
+        ya = static_cast<int>(wrap(y0, height)), 
+        yb = static_cast<int>(wrap(y0 + 1, height));
+    
+    uint32_t c00 = pixels[static_cast<size_t>(ya) * width + xa];
+    uint32_t c10 = pixels[static_cast<size_t>(ya) * width + xb];
+    uint32_t c01 = pixels[static_cast<size_t>(yb) * width + xa];
+    uint32_t c11 = pixels[static_cast<size_t>(yb) * width + xb];
 
     // Les 4 poids (leur somme vaut 1)
     float w00 = (1.0f - tx) * (1.0f - ty);
@@ -115,7 +119,7 @@ uint32_t Texture::sampleBilinear(float u, float v) const
                      + ((c10 >> shift) & 0xFF) * w10
                      + ((c01 >> shift) & 0xFF) * w01
                      + ((c11 >> shift) & 0xFF) * w11;
-        result |= ((uint32_t)(ch + 0.5f) & 0xFF) << shift;
+        result |= (static_cast<uint32_t>(ch + 0.5f) & 0xFF) << shift;
     }
     return result;
 }

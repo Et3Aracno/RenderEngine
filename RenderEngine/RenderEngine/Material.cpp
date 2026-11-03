@@ -7,13 +7,13 @@
 inline uint32_t Material::shade_channel(uint32_t texel, int shift,
                                         float diffuse_k, float spec_k, float metallic)
 {
-    float c = ((texel >> shift) & 0xFF) / 255.0f;
+	float c = ((texel >> shift) & 0xFF) / 255.0f;// Normalisation du canal de couleur
 
-    float spec_color = 1.0f + (c - 1.0f) * metallic;
-    float val = c * diffuse_k * (1.0f - metallic) + spec_color * spec_k;
+	float spec_color = 1.0f + (c - 1.0f) * metallic; // Mélange entre la couleur du matériau et la couleur spéculaire (blanc) en fonction de la valeur de metallic
+    float val = c * diffuse_k * (1.0f - metallic) + spec_color * spec_k;// Calcul de la valeur finale du canal en combinant la couleur diffuse et spéculaire, en tenant compte de la valeur de metallic
 
     if (val > 1.0f) val = 1.0f;
-    return (uint32_t)(val * 255.0f);
+	return static_cast<uint32_t>(val * 255.0f);// Conversion de la valeur , on tronque à 255
 }
 
 uint32_t Material::rdPass(uint32_t src, uint32_t dst) const
