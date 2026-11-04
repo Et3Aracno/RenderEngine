@@ -219,14 +219,14 @@ inline void Renderer::RasterizeTri(const ScreenTri& t, const Tile& tile, const M
 
 			int e0 = edge(Maths::Vec2S{ static_cast<float>(t.x[1]),
 			static_cast<float>(t.y[1])},
-			Maths::Vec2S{(float)t.x[2], 
+			Maths::Vec2S{ static_cast<float>(t.x[2]),
 			static_cast<float>(t.y[2])}, Maths::Vec2S{ static_cast<float>(x),
 			static_cast<float>(y)});
 
 			int e1 = edge(Maths::Vec2S{(float)t.x[2],
 			static_cast<float>(t.y[2])}, Maths::Vec2S{ static_cast<float>(t.x[0]),
 			static_cast<float>(t.y[0])},
-			Maths::Vec2S{(float)x, 
+			Maths::Vec2S{ static_cast<float>(x),
 			static_cast<float>(y)});
 
 			int e2 = edge(Maths::Vec2S{ static_cast<float>(t.x[0]),
@@ -433,8 +433,8 @@ void Renderer::update()
 	while (!glfwWindowShouldClose(window)) {
 		glfwPollEvents();
 
-		double seconds = (double)(glfwGetTimerValue() - start) / (double)freq;		//tick / frequence  = temps en seconde					
-		float angle = (float)seconds;   // 1 radian par seconde
+		double seconds = static_cast<double>((glfwGetTimerValue() - start)) / static_cast<float>((double)freq);		//tick / frequence  = temps en seconde					
+		float angle = static_cast<float>(seconds);   // 1 radian par seconde
 
 		Maths::Matrix4x4SIMD model = Maths::Matrix4x4SIMD::RotationY(angle * 0.7f);
 		Maths::Matrix4x4SIMD mvp = projection * view * model;
