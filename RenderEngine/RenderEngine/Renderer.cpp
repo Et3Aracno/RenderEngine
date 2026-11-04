@@ -159,7 +159,7 @@ void Renderer::RenderTile(int tileIndex, const Material& mat)
 void Renderer::ProcessTiles(const Material& mat)
 {
 	int t;
-	while ((t = nextTile.fetch_add(1)) < (int)tiles.size())
+	while ((t = nextTile.fetch_add(1)) < static_cast<int>(tiles.size()))
 		RenderTile(t, mat);
 }
 
@@ -184,7 +184,7 @@ void Renderer::WorkerLoop(const Material& mat)
 
 void Renderer::StartThreadPool(const Material& mat)
 {
-	int nbT = (int)std::thread::hardware_concurrency();
+	int nbT = static_cast<int>(std::thread::hardware_concurrency());
 	if (nbT < 1) nbT = 1;
 	int workers = nbT - 1;
 
@@ -216,9 +216,26 @@ inline void Renderer::RasterizeTri(const ScreenTri& t, const Tile& tile, const M
 
 	for (int y = miny; y <= maxy; y++) {
 		for (int x = minx; x <= maxx; x++) {
-			int e0 = edge(Maths::Vec2S{(float)t.x[1], (float)t.y[1]}, Maths::Vec2S{(float)t.x[2], (float)t.y[2]}, Maths::Vec2S{(float)x, (float)y});
-			int e1 = edge(Maths::Vec2S{(float)t.x[2], (float)t.y[2]}, Maths::Vec2S{(float)t.x[0], (float)t.y[0]}, Maths::Vec2S{(float)x, (float)y});
-			int e2 = edge(Maths::Vec2S{(float)t.x[0], (float)t.y[0]}, Maths::Vec2S{(float)t.x[1], (float)t.y[1]}, Maths::Vec2S{(float)x, (float)y});
+
+			int e0 = edge(Maths::Vec2S{ static_cast<float>(t.x[1]),
+			static_cast<float>(t.y[1])},
+			Maths::Vec2S{ static_cast<float>(t.x[2]),
+			static_cast<float>(t.y[2])}, Maths::Vec2S{ static_cast<float>(x),
+			static_cast<float>(y)});
+
+			int e1 = edge(Maths::Vec2S{(float)t.x[2],
+			static_cast<float>(t.y[2])}, Maths::Vec2S{ static_cast<float>(t.x[0]),
+			static_cast<float>(t.y[0])},
+			Maths::Vec2S{ static_cast<float>(x),
+			static_cast<float>(y)});
+
+			int e2 = edge(Maths::Vec2S{ static_cast<float>(t.x[0]),
+				static_cast<float>(t.y[0])},
+
+				Maths::Vec2S{ static_cast<float>(t.x[1]),
+				static_cast<float>(t.y[1])},
+				Maths::Vec2S{ static_cast<float>(x),
+				static_cast<float>(y)});
 			if ((e0 | e1 | e2) < 0) continue;
 
 			float l0 = e0 * t.invArea;
@@ -291,7 +308,7 @@ inline void Renderer::project(const ClipVertex* tri) {
 		st.ny[k] = tri[k].normal.y * invW[k];
 		st.nz[k] = tri[k].normal.z * invW[k];
 	}
-	st.invArea = 1.0f / (float)area;
+	st.invArea = 1.0f / static_cast<float>(area);
 	st.minx = clampi(rminx, 0, defaultWidth - 1);
 	st.maxx = clampi(rmaxx, 0, defaultWidth - 1);
 	st.miny = clampi(rminy, 0, defaultHeight - 1);
@@ -316,7 +333,7 @@ inline void Renderer::project(const ClipVertex* tri) {
 	tris.clear();
 
 	// Étape 2 : par triangle -> clipping, puis projection + dessin
-	for (int fidx = 0; fidx < (int)mesh.faces.size() / 3; fidx++) {
+	for (int fidx = 0; fidx < static_cast<int>(mesh.faces.size()) / 3; fidx++) {
 		Maths::Vec3S abc;
 		abc.x = mesh.faces[fidx * 3 + 0];
 		abc.y = mesh.faces[fidx * 3 + 1];
@@ -385,7 +402,7 @@ void Renderer::update()
 	const uint64_t start = glfwGetTimerValue();
 
 	Renderer::window = glfwCreateWindow(defaultWidth, defaultHeight, "hello", NULL, NULL);
-	glfwSwapInterval(0);
+	
 
 	// Projection and view stay fixed; only the model spins.
 	const float aspect = defaultWidth / defaultHeight;
@@ -411,12 +428,12 @@ void Renderer::update()
 	double lastTime = glfwGetTime();
 	int frameCount = 0;
 	Color color(16, 16, 24);
-
+	glfwSwapInterval(0);
 	while (!glfwWindowShouldClose(window)) {
 		glfwPollEvents();
 
-		double seconds = (double)(glfwGetTimerValue() - start) / (double)freq;		//tick / frequence  = temps en seconde					
-		float angle = (float)seconds;   // 1 radian par seconde
+		double seconds = static_cast<double>((glfwGetTimerValue() - start)) / static_cast<float>((double)freq);		//tick / frequence  = temps en seconde					
+		float angle = static_cast<float>(seconds);   // 1 radian par seconde
 
 		Maths::Matrix4x4SIMD model = Maths::Matrix4x4SIMD::RotationY(angle * 0.7f);
 		Maths::Matrix4x4SIMD mvp = projection * view * model;

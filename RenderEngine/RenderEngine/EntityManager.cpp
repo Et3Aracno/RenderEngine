@@ -1,5 +1,5 @@
 #include "EntityManager.h"
-
+#include <stdexcept>
 
 EntityManager::EntityManager()
 {
@@ -48,8 +48,11 @@ void EntityManager::destroyEntity(int entity)
 
 void EntityManager::addComponent(int entity, int componentID, void* value)
 {
-	assert(alive[entity]);
-	assert(componentID >= 0 && componentID < static_cast<int>(componentManagers.size()));
+	if (entity < 0 || entity >= MAX_ENTITIES || !alive[entity])
+		throw std::out_of_range("entité invalide");
+
+	if (componentID < 0 || componentID >= static_cast<int>(componentManagers.size()))
+		throw std::out_of_range("componentID invalide");
 
 	componentManagers[componentID]->addComponent(entity, value);
 	entityComponents[entity].set(componentID);
@@ -57,6 +60,7 @@ void EntityManager::addComponent(int entity, int componentID, void* value)
 
 void EntityManager::removeComponent(int entity, int componentID)
 {
+	//besoin d'ajouter un verif if pour le release histoire de sécuriser
 	assert(componentID >= 0 && componentID < static_cast<int>(componentManagers.size()));
 
 	componentManagers[componentID]->removeComponent(entity);
@@ -65,11 +69,12 @@ void EntityManager::removeComponent(int entity, int componentID)
 
 bool EntityManager::hasComponent(int entity, int componentID) const
 {
-	return entityComponents[entity].test(componentID);
+	return entityComponents[entity].test(componentID) && componentManagers[componentID]->hasComponent(entity);
 }
 
 void* EntityManager::getComponent(int entity, int componentID)
 {
+	//besoin d'ajouter un verif if pour le release histoire de sécuriser
 	assert(componentID >= 0 && componentID < static_cast<int>(componentManagers.size()));
 
 	return componentManagers[componentID]->getComponent(entity);

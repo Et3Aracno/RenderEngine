@@ -30,8 +30,8 @@ static inline float ClipNearDist(const ClipVertex& v) {
 
 // Sutherland-Hodgman contre le plan near.
 // Écrit 0, 3 ou 6 sommets dans out (= 0, 1 ou 2 triangles). out doit faire >= 6.
-static inline void ClipTriangleNear(const ClipVertex& v0, const ClipVertex& v1, const ClipVertex& v2,
-	ClipVertex* out, int* outNTris) {
+static inline void ClipTriangleNear(const ClipVertex& v0, const ClipVertex& v1, const ClipVertex& v2,ClipVertex* out, int* outNTris) 
+{
 	const ClipVertex in[3] = { v0, v1, v2 };
 	ClipVertex poly[4];
 	int n = 0;
