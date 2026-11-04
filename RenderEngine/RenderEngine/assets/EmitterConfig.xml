@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<EmitterConfig>
+	<emitter type="fire">
+		<thetaRange min="80" max="110"/>
+		<angleRange min="0" max="360"/>
+		<rotSpeed value="0" randMin="-1" randMax="1"/>
+		<startSpeed value="200" randMin="0" randMax="1"/>
+		<endSpeed value="200" randMin="0" randMax="1"/>
+		<startSize value="200" randMin="0" randMax="1"/>
+		<endSize value="80" randMin="1" randMax="1"/>
+		<emitNumber value="1"/>
+		<emitVariance value="0" randMin="0" randMax="1"/>
+		<maxParticleLife value="100" randMin="0" randMax="1"/>
+		<textureRect x="0" y="0" w="128" h="128"/>
+		<startColor r="255" g="100" b="0" a="255"/>
+		<endColor r="210" g="210" b="210" a="0"/>
+		<blendMode mode="add"/>
+		<lifetime value="-1"/>
+	</emitter>
+
+	<emitter type="smoke">
+		<thetaRange min="75" max="105"/>
+		<angleRange min="0" max="360"/>
+		<rotSpeed value="0" randMin="-0.5" randMax="0.5"/>
+		<startSpeed value="60" randMin="0" randMax="1"/>
+		<endSpeed value="20" randMin="0" randMax="1"/>
+		<startSize value="60" randMin="0" randMax="1"/>
+		<endSize value="220" randMin="0.5" randMax="1"/>
+		<emitNumber value="1"/>
+		<emitVariance value="0" randMin="0" randMax="1"/>
+		<maxParticleLife value="220" randMin="0" randMax="1"/>
+		<textureRect x="0" y="0" w="128" h="128"/>
+		<startColor r="70" g="70" b="70" a="180"/>
+		<endColor r="150" g="150" b="150" a="0"/>
+		<blendMode mode="alpha"/>
+		<lifetime value="-1"/>
+	</emitter>
+
+	<emitter type="steam">
+		<thetaRange min="85" max="95"/>
+		<angleRange min="0" max="360"/>
+		<rotSpeed value="0" randMin="-0.3" randMax="0.3"/>
+		<startSpeed value="120" randMin="0" randMax="1"/>
+		<endSpeed value="40" randMin="0" randMax="1"/>
+		<startSize value="40" randMin="0" randMax="1"/>
+		<endSize value="140" randMin="0.5" randMax="1"/>
+		<emitNumber value="1"/>
+		<emitVariance value="0" randMin="0" randMax="1"/>
+		<maxParticleLife value="90" randMin="0" randMax="1"/>
+		<textureRect x="0" y="0" w="128" h="128"/>
+		<startColor r="255" g="255" b="255" a="120"/>
+		<endColor r="220" g="230" b="240" a="0"/>
+		<blendMode mode="alpha"/>
+		<lifetime value="-1"/>
+	</emitter>
+
+	<emitter type="sparks">
+		<thetaRange min="40" max="140"/>
+		<angleRange min="0" max="360"/>
+		<rotSpeed value="0" randMin="-5" randMax="5"/>
+		<startSpeed value="450" randMin="0" randMax="1"/>
+		<endSpeed value="50" randMin="0" randMax="1"/>
+		<startSize value="12" randMin="0" randMax="1"/>
+		<endSize value="2" randMin="1" randMax="1"/>
+		<emitNumber value="4"/>
+		<emitVariance value="2" randMin="0" randMax="1"/>
+		<maxParticleLife value="40" randMin="0" randMax="1"/>
+		<textureRect x="0" y="0" w="128" h="128"/>
+		<startColor r="255" g="240" b="150" a="255"/>
+		<endColor r="255" g="60" b="0" a="0"/>
+		<blendMode mode="add"/>
+		<lifetime value="-1"/>
+	</emitter>
+
+	<emitter type="magic">
+		<thetaRange min="-90" max="90"/>
+		<angleRange min="0" max="360"/>
+		<rotSpeed value="0" randMin="-4" randMax="4"/>
+		<startSpeed value="80" randMin="0" randMax="1"/>
+		<endSpeed value="10" randMin="0" randMax="1"/>
+		<startSize value="50" randMin="0" randMax="1"/>
+		<endSize value="0" randMin="1" randMax="1"/>
+		<emitNumber value="2"/>
+		<emitVariance value="1" randMin="0" randMax="1"/>
+		<maxParticleLife value="120" randMin="0" randMax="1"/>
+		<textureRect x="0" y="0" w="128" h="128"/>
+		<startColor r="120" g="80" b="255" a="255"/>
+		<endColor r="0" g="200" b="255" a="0"/>
+		<blendMode mode="add"/>
+		<lifetime value="-1"/>
+	</emitter>
+
+	<emitter type="explosion">
+		<thetaRange min="-90" max="90"/>
+		<angleRange min="0" max="360"/>
+		<rotSpeed value="0" randMin="-2" randMax="2"/>
+		<startSpeed value="350" randMin="0.3" randMax="1"/>
+		<endSpeed value="0" randMin="0" randMax="1"/>
+		<startSize value="80" randMin="0" randMax="1"/>
+		<endSize value="250" randMin="0.5" randMax="1"/>
+		<emitNumber value="30"/>
+		<emitVariance value="10" randMin="0" randMax="1"/>
+		<maxParticleLife value="60" randMin="0" randMax="1"/>
+		<textureRect x="0" y="0" w="128" h="128"/>
+		<startColor r="255" g="200" b="50" a="255"/>
+		<endColor r="80" g="30" b="0" a="0"/>
+		<blendMode mode="add"/>
+		<lifetime value="3"/>
+	</emitter>
+</EmitterConfig>
