@@ -2,6 +2,8 @@
 #include <fstream>
 #include <iostream>
 #include <cstring>
+#include <algorithm>
+
 
 bool Font::loadFont(const std::string& path)
 {
@@ -272,16 +274,294 @@ bool Font::getGlyphLocation(uint16_t glyphIndex, size_t& offset, size_t& length)
         end = readU32(locaBase + 4 * (glyphIndex + 1));
     }
 
-    // 4. longueur
+    // longueur
     if (end <= start)
         return false;       
 
     length = end - start;
 
-    // 5. le glyphe doit tenir dans la table glyf
+    // le glyphe doit tenir dans la table glyf
     if (end > glyf->second.length)
         return false;
 
     offset = glyfBase + start;
     return true;
+}
+
+
+bool Font::loadGlyph(uint16_t glyphIndex, GlyphOutline& out) const
+{
+    out = GlyphOutline{};
+
+    //  glyphe loc
+    size_t offset = 0, length = 0;
+    if (!getGlyphLocation(glyphIndex, offset, length))
+        return false;
+
+    size_t end = offset + length;     // premier octet après le glyphe
+    size_t p = offset;              // curseur de lecture
+
+    //En-tête de 10 octets
+    if (length < 10)
+        return false;
+
+    int16_t numContours = readI16(p);
+    out.xMin = readI16(p + 2);
+    out.yMin = readI16(p + 4);
+    out.xMax = readI16(p + 6);
+    out.yMax = readI16(p + 8);
+    p += 10;
+
+    if (numContours <= 0)             // négatif : composite (non géré)
+        return false;
+
+    // 3. Fins de contours
+    size_t nc = static_cast<size_t>(numContours);
+    if (p + 2 * nc + 2 > end)         // endPts + instructionLength doivent tenir
+        return false;
+
+    out.endPts.resize(nc);
+    for (size_t i = 0; i < nc; ++i)
+    {
+        out.endPts[i] = readU16(p + 2 * i);
+        if (i > 0 && out.endPts[i] <= out.endPts[i - 1])
+            return false;             // doit être strictement croissant
+    }
+    p += 2 * nc;
+
+    size_t numPoints = static_cast<size_t>(out.endPts.back()) + 1;
+
+    // 4. Instructions : on saute
+    uint16_t instructionLength = readU16(p);
+    p += 2 + instructionLength;
+    if (p > end)
+        return false;
+
+    // 5. Flags (avec répétition)
+    std::vector<uint8_t> flags;
+    flags.reserve(numPoints);
+    while (flags.size() < numPoints)
+    {
+        if (p >= end) return false;
+        uint8_t f = m_data[p++];
+        flags.push_back(f);
+
+        if (f & 0x08)                 // REPEAT : l'octet suivant = nombre de copies
+        {
+            if (p >= end) return false;
+            uint8_t repeat = m_data[p++];
+            for (uint8_t r = 0; r < repeat && flags.size() < numPoints; ++r)
+                flags.push_back(f);
+        }
+    }
+
+    // 6. Coordonnées x (toutes les x d'abord)
+    out.points.resize(numPoints);
+    int x = 0;
+    for (size_t i = 0; i < numPoints; ++i)
+    {
+        uint8_t f = flags[i];
+        if (f & 0x02)                 // X_SHORT : 1 octet, signe donné par 0x10
+        {
+            if (p >= end) return false;
+            int dx = m_data[p++];
+            x += (f & 0x10) ? dx : -dx;
+        }
+        else if (!(f & 0x10))         // ni short ni "same" : delta sur 2 octets signés
+        {
+            if (p + 2 > end) return false;
+            x += readI16(p);
+            p += 2;
+        }
+        // sinon : x identique au précédent, rien à lire
+
+        out.points[i].pointCord.x = static_cast<float>(x);
+        out.points[i].onCurve = (f & 0x01) != 0;
+    }
+
+    // 7. Coordonnées y (même logique, bits 0x04 et 0x20)
+    int y = 0;
+    for (size_t i = 0; i < numPoints; ++i)
+    {
+        uint8_t f = flags[i];
+        if (f & 0x04)
+        {
+            if (p >= end) return false;
+            int dy = m_data[p++];
+            y += (f & 0x20) ? dy : -dy;
+        }
+        else if (!(f & 0x20))
+        {
+            if (p + 2 > end) return false;
+            y += readI16(p);
+            p += 2;
+        }
+        out.points[i].pointCord.y = static_cast<float>(y);
+    }
+
+    return true;
+}
+
+static Maths::Vec2S midpoint(Maths::Vec2S a, Maths::Vec2S b)
+{
+    return { (a.x + b.x) * 0.5f, (a.y + b.y) * 0.5f };
+}
+
+// Ajoute à 'out' les points de la courbe, SANS le point de départ p0 (déjà dans out)
+static void flattenQuad(Maths::Vec2S p0, Maths::Vec2S p1, Maths::Vec2S p2, int steps, std::vector<Maths::Vec2S>& out)
+{
+    for (int i = 1; i <= steps; ++i)
+    {
+        float t = static_cast<float>(i) / steps;
+        float u = 1.0f - t;
+        out.push_back({
+            u * u * p0.x + 2.0f * u * t * p1.x + t * t * p2.x,
+            u * u * p0.y + 2.0f * u * t * p1.y + t * t * p2.y
+            });
+    }
+}
+
+std::vector<std::vector<Maths::Vec2S>> Font::flattenOutline(const GlyphOutline& g, int steps)
+{
+    struct P { Maths::Vec2S p; bool on; };
+
+    std::vector<std::vector<Maths::Vec2S>> contours;
+    size_t first = 0;
+
+    for (uint16_t endIdx : g.endPts)
+    {
+        size_t last = endIdx;
+        if (last < first || last >= g.points.size())
+            break;                                   // données incohérentes
+
+        size_t n = last - first + 1;
+        if (n < 2) { first = last + 1; continue; }   // contour dégénéré
+
+        // 1. Liste cyclique avec points on-curve implicites
+        std::vector<P> pts;
+        for (size_t i = 0; i < n; ++i)
+        {
+            const GlyphPoint& cur = g.points[first + i];
+            const GlyphPoint& nxt = g.points[first + (i + 1) % n];
+
+            Maths::Vec2S c = { static_cast<float>(cur.pointCord.x), static_cast<float>(cur.pointCord.y) };
+            Maths::Vec2S d = { static_cast<float>(nxt.pointCord.x), static_cast<float>(nxt.pointCord.y) };
+
+            pts.push_back({ c, cur.onCurve });
+            if (!cur.onCurve && !nxt.onCurve)
+                pts.push_back({ midpoint(c, d), true });
+        }
+
+        // 2. Commencer sur un point on-curve
+        size_t s = 0;
+        while (s < pts.size() && !pts[s].on) ++s;
+        if (s == pts.size()) { first = last + 1; continue; }
+        std::rotate(pts.begin(), pts.begin() + s, pts.end());
+
+        // 3. Parcours
+        size_t m = pts.size();
+        std::vector<Maths::Vec2S> poly;
+        Maths::Vec2S cur = pts[0].p;
+        poly.push_back(cur);
+
+        size_t i = 1;
+        while (i <= m)
+        {
+            const P& q = pts[i % m];
+            if (q.on)
+            {
+                poly.push_back(q.p);
+                cur = q.p;
+                i += 1;
+            }
+            else
+            {
+                Maths::Vec2S end = pts[(i + 1) % m].p;      // forcément on-curve
+                flattenQuad(cur, q.p, end, steps, poly);
+                cur = end;
+                i += 2;
+            }
+        }
+
+        // 4. Le dernier point retombe sur le premier : on retire le doublon
+        if (poly.size() > 1)
+            poly.pop_back();
+
+        contours.push_back(std::move(poly));
+        first = last + 1;
+    }
+    return contours;
+}
+
+uint16_t Font::getAdvanceWidth(uint16_t glyphIndex) const
+{
+    uint16_t numHMetrics = readU16(m_tables.at("hhea").offset + 34);
+    if (glyphIndex >= numHMetrics)
+        glyphIndex = numHMetrics - 1;
+    return readU16(m_tables.at("hmtx").offset + 4 * glyphIndex);
+}
+
+
+void Font::fill(const std::vector<std::vector<Maths::Vec2S>>& contours, Bitmap& bmp)
+{
+    for (int y = 0; y < bmp.height; ++y)
+    {
+        float sy = y + 0.5f;                     
+        std::vector<float> xs;
+
+     
+        for (const auto& poly : contours)
+            for (size_t i = 0; i < poly.size(); ++i)
+            {
+                Maths::Vec2S a = poly[i], b = poly[(i + 1) % poly.size()];
+                if ((a.y <= sy) != (b.y <= sy))
+                    xs.push_back(a.x + (sy - a.y) / (b.y - a.y) * (b.x - a.x));
+            }
+        std::sort(xs.begin(), xs.end());
+
+      
+        for (size_t i = 0; i + 1 < xs.size(); i += 2)
+        {
+            int x0 = std::max(0, int(std::ceil(xs[i] - 0.5f)));
+            int x1 = std::min(bmp.width, int(std::ceil(xs[i + 1] - 0.5f)));
+            for (int x = x0; x < x1; ++x)
+                bmp.pixels[y * bmp.width + x] = 255;
+        }
+    }
+}
+
+
+Bitmap Font::renderText(const std::string& text, float pixelSize) const
+{
+    float scale = pixelSize / m_unitsPerEm;
+    float ascent = getAscender() * scale;
+    float descent = -getDescender() * scale;
+
+
+    float total = 0;
+    for (char c : text)
+        total += getAdvanceWidth(getGlyphIndex((unsigned char)c)) * scale;
+
+    Bitmap bmp(int(std::ceil(total)) + 1, int(std::ceil(ascent + descent)) + 1);
+
+    float penX = 0;
+    for (char c : text)
+    {
+        uint16_t gi = getGlyphIndex((unsigned char)c);
+
+        GlyphOutline outline;
+        if (loadGlyph(gi, outline))
+        {
+            auto contours = flattenOutline(outline);
+            for (auto& poly : contours)
+                for (auto& p : poly)
+                {
+                    p.x = penX + p.x * scale;      // échelle + décalage
+                    p.y = ascent - p.y * scale;    // inversion de Y
+                }
+            fill(contours, bmp);
+        }
+        penX += getAdvanceWidth(gi) * scale;       // on avance le curseur
+    }
+    return bmp;
 }

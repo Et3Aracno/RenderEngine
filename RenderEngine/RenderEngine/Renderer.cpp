@@ -4,7 +4,6 @@
 #include "Texture.h"
 #include "clip.h"
 #include "Material.h"
-#include "Font.h"
 #include <stdexcept>
 
 
@@ -360,6 +359,13 @@ inline void Renderer::project(const ClipVertex* tri) {
 	RenderAllTiles(mat);
 }
 
+ void Renderer::drawBitmap(const Bitmap& bmp, int x, int y, Color color)
+ {
+	 for (int row = 0; row < bmp.height; ++row)
+		 for (int col = 0; col < bmp.width; ++col)
+			 if (bmp.pixels[row * bmp.width + col])
+				 put_pixel(x + col, defaultHeight - 1 - (y + row), color);
+ }
 
 void Renderer::init()
 {
@@ -378,7 +384,7 @@ void Renderer::update()
 
 	Font font;
 	font.loadFont("assets/SIXTY.TTF");
-
+	Bitmap label = font.renderText("Maxime      LE   GOAT", 40.0f);
 
 	Mesh mesh;
 	MeshLoader::loadMesh("assets/spot.obj", mesh);
@@ -439,6 +445,7 @@ void Renderer::update()
 		Maths::Matrix4x4SIMD mvp = projection * view * model;
 
 		drawMeshTextured(mesh, mvp, model, face_normals, vertex_normals, material);
+		drawBitmap(label, 20, 10, Color(200, 255, 255));
 
 		glDrawPixels(defaultWidth, defaultHeight, GL_RGBA, GL_UNSIGNED_BYTE, framebuffer);
 		glfwSwapBuffers(window);
