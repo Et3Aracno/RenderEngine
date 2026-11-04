@@ -1,5 +1,4 @@
 #include "Renderer.h"
-
 #include "MeshRLoader.h"
 #include "Texture.h"
 #include "clip.h"
@@ -158,9 +157,9 @@ void Renderer::RenderTile(int tileIndex, const Material& mat)
 
 void Renderer::ProcessTiles(const Material& mat)
 {
-	int t;
-	while ((t = nextTile.fetch_add(1)) < (int)tiles.size())
-		RenderTile(t, mat);
+	int tileIndex;
+	while ((tileIndex = nextTile.fetch_add(1)) < (int)tiles.size())
+		RenderTile(tileIndex, mat);
 }
 
 void Renderer::RenderAllTiles(const Material& mat)
@@ -386,7 +385,6 @@ void Renderer::update()
 	const uint64_t start = glfwGetTimerValue();
 
 	Renderer::window = glfwCreateWindow(defaultWidth, defaultHeight, "hello", NULL, NULL);
-	glfwSwapInterval(0);
 
 	// Projection and view stay fixed; only the model spins.
 	const float aspect = defaultWidth / defaultHeight;
@@ -412,7 +410,7 @@ void Renderer::update()
 	double lastTime = glfwGetTime();
 	int frameCount = 0;
 	Color color(16, 16, 24);
-
+	glfwSwapInterval(0);
 	while (!glfwWindowShouldClose(window)) {
 		glfwPollEvents();
 

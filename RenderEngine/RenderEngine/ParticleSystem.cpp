@@ -5,9 +5,9 @@ Particle::Particle() : Next(nullptr) {}
 void Particle::update(float dt){
 	Life--;
 
-	attributes.vel.x = speed * sin(theta) * cos(phi);
+	/*attributes.vel.x = speed * sin(theta) * cos(phi);
 	attributes.vel.y = speed * sin(phi);
-	attributes.vel.z = speed * cos(theta) * cos(phi);
+	attributes.vel.z = speed * cos(theta) * cos(phi);*/
 
 	attributes.pos += attributes.vel * dt;
 }
@@ -27,7 +27,7 @@ void ParticlePool::Generate(){
 	Particle* newParticle = FirstAvailable;
 	FirstAvailable = FirstAvailable->GetNext();
 
-	newParticle->Init(position, velocity); /////////// More to see with the emitter & if parameters necessay
+	//newParticle->Init(position, velocity); /////////// More to see with the emitter & if parameters necessay
 }
 
 
