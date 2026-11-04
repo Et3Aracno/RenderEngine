@@ -7,8 +7,8 @@
 #define STBI_NO_HDR
 #define STBI_NO_LINEAR
 #ifdef _MSC_VER
-#  pragma warning(push)
-#  pragma warning(disable: 4244 4456 4457 4459 4505 4267 4996)
+#pragma warning(push)
+#pragma warning(disable: 4244 4456 4457 4459 4505 4267 4996)
 #endif
 #include "assets/stb_image.h"
 #ifdef _MSC_VER

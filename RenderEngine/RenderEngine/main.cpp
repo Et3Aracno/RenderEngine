@@ -15,9 +15,9 @@ int main()
 	em.addComponent(entity, rendererID, &renderer); 
 
 	ecs.addSystem([rendererID](EntityManager& em) {           
-		for (int e : em.fetchAllEntities({ rendererID }))     
+		for (int entity : em.fetchAllEntities({ rendererID }))     
 		{
-			Renderer* r = static_cast<Renderer*>(em.getComponent(e, rendererID));
+			Renderer* r = static_cast<Renderer*>(em.getComponent(entity, rendererID));
 			
 			r->init();
 			r->update();                                      
