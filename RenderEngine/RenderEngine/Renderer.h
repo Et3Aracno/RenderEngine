@@ -15,6 +15,7 @@
 #include "External Lib/MathLibrary/MathLib.h"
 #include "Color.h"
 #include "GLFW/glfw3.h"
+#include "Font.h"
 
 
 class Mesh;
@@ -59,6 +60,7 @@ private:
 	static int  edge(Maths::Vec2S v1, Maths::Vec2S v2, Maths::Vec2S p);
 	static void clearColor(uint32_t color); //////////// A VOIR
 	static void clearZbuffer();
+
 	static int  clampi(int v, int lo, int hi);
 	static void computeFaceNormals(const Mesh* mesh, Maths::Vec3S* out);
 	static void computeVertexNormals(const Mesh* mesh, const Maths::Vec3S* faceNormals, Maths::Vec3S* out);

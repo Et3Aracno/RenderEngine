@@ -3,7 +3,6 @@
 #include "Texture.h"
 #include "clip.h"
 #include "Material.h"
-#include "Font.h"
 #include <stdexcept>
 #include <functional>
 
@@ -322,6 +321,14 @@ void Renderer::drawMeshTextured(const Mesh& mesh, const Maths::Matrix4x4SIMD& mv
 	renderAllTiles(mat);
 }
 
+ void Renderer::drawBitmap(const Bitmap& bmp, int x, int y, Color color)
+ {
+	 for (int row = 0; row < bmp.height; ++row)
+		 for (int col = 0; col < bmp.width; ++col)
+			 if (bmp.pixels[row * bmp.width + col])
+				 put_pixel(x + col, defaultHeight - 1 - (y + row), color);
+ }
+
 void Renderer::init()
 {
 	if (!glfwInit()) {
@@ -337,6 +344,7 @@ void Renderer::update()
 
 	Font font;
 	font.loadFont("assets/SIXTY.TTF");
+	Bitmap label = font.renderText("Maxime      LE   GOAT", 40.0f);
 
 	Mesh mesh;
 	MeshLoader::loadMesh("assets/spot.obj", mesh);
@@ -391,6 +399,7 @@ void Renderer::update()
 		Maths::Matrix4x4SIMD mvp = projection * view * model;
 
 		drawMeshTextured(mesh, mvp, model, faceNormals.data(), vertexNormals.data(), material);
+		drawBitmap(label, 20, 10, Color(200, 255, 255));
 
 		glDrawPixels(defaultWidth_, defaultHeight_, GL_RGBA, GL_UNSIGNED_BYTE, framebuffer_);
 		glfwSwapBuffers(window_);
