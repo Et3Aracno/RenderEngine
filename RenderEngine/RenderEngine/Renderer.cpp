@@ -36,7 +36,7 @@ void Renderer::clearZbuffer()
 
 void Renderer::clearAllBuffer()
 {
-	clearColor(getBcColor().Getrgb());
+	clearColor(getBcColor().getRgb());
 	clearZbuffer();
 }
 
@@ -44,7 +44,7 @@ void Renderer::drawPx(int sizeX, int sizeY)
 {
 	for (int y = 0; y < defaultHeight_; ++y)
 		for (int x = 0; x < defaultWidth_; ++x)
-			framebuffer_[y * defaultWidth_ + x] = Color(0xFF000000 | (x * 255 / defaultWidth_) << 16 | (y * 255 / defaultHeight_) << 8).Getrgb();
+			framebuffer_[y * defaultWidth_ + x] = Color(0xFF000000 | (x * 255 / defaultWidth_) << 16 | (y * 255 / defaultHeight_) << 8).getRgb();
 
 	glDrawPixels(defaultWidth_, defaultHeight_, GL_RGBA, GL_UNSIGNED_BYTE, framebuffer_);
 }
@@ -52,7 +52,7 @@ void Renderer::drawPx(int sizeX, int sizeY)
 void Renderer::putPixel(int x, int y, Color color)
 {
 	if (x < 0 || x >= defaultWidth_ || y < 0 || y >= defaultHeight_) return;
-	framebuffer_[y * defaultWidth_ + x] = color.Getrgb();
+	framebuffer_[y * defaultWidth_ + x] = color.getRgb();
 }
 
 int Renderer::edge(Maths::Vec2S v1, Maths::Vec2S v2, Maths::Vec2S p)
@@ -125,7 +125,7 @@ void Renderer::buildTiles()
 // clear + rasterize
 void Renderer::renderTile(int tileIndex, const Material& mat)
 {
-	static const uint32_t bgColor = Color(26, 31, 41).Getrgb();   // init thread-safe
+	static const uint32_t bgColor = Color(26, 31, 41).getRgb();   // init thread-safe
 	const Tile& tile = tiles_[tileIndex];
 
 	for (int y = tile.y0; y < tile.y1; y++) {
@@ -141,7 +141,7 @@ void Renderer::renderTile(int tileIndex, const Material& mat)
 void Renderer::processTiles(const Material& mat)
 {
 	int tileIndex;
-	while ((tileIndex = nextTile_.fetch_add(1)) < static_cast<int>tiles_.size())
+	while ((tileIndex = nextTile_.fetch_add(1)) < static_cast<int>(tiles_.size()))
 		renderTile(tileIndex, mat);
 }
 
@@ -165,7 +165,7 @@ void Renderer::workerLoop(const Material& mat)
 
 void Renderer::startThreadPool(const Material& mat)
 {
-	int threadCount = static_cast<int>std::thread::hardware_concurrency();
+	int threadCount = static_cast<int>(std::thread::hardware_concurrency());
 	if (threadCount < 1) threadCount = 1;
 	int workers = threadCount - 1;
 
@@ -197,9 +197,9 @@ void Renderer::rasterizeTri(const ScreenTri& t, const Tile& tile, const Material
 
 	for (int y = minY; y <= maxY; y++) {
 		for (int x = minX; x <= maxX; x++) {
-			int e0 = edge(Maths::Vec2S{ static_cast<float>t.x[1], static_cast<float>t.y[1] }, Maths::Vec2S{ static_cast<float>t.x[2], static_cast<float>t.y[2] }, Maths::Vec2S{ static_cast<float>x, static_cast<float>y });
-			int e1 = edge(Maths::Vec2S{ static_cast<float>t.x[2], static_cast<float>t.y[2] }, Maths::Vec2S{ static_cast<float>t.x[0], static_cast<float>t.y[0] }, Maths::Vec2S{ static_cast<float>x, static_cast<float>y });
-			int e2 = edge(Maths::Vec2S{ static_cast<float>t.x[0], static_cast<float>t.y[0] }, Maths::Vec2S{ static_cast<float>t.x[1], static_cast<float>t.y[1] }, Maths::Vec2S{ static_cast<float>x, static_cast<float>y });
+			int e0 = edge(Maths::Vec2S{ static_cast<float>(t.x[1]), static_cast<float>(t.y[1]) }, Maths::Vec2S{ static_cast<float>(t.x[2]), static_cast<float>(t.y[2]) }, Maths::Vec2S{ static_cast<float>(x), static_cast<float>(y) });
+			int e1 = edge(Maths::Vec2S{ static_cast<float>(t.x[2]), static_cast<float>(t.y[2]) }, Maths::Vec2S{ static_cast<float>(t.x[0]), static_cast<float>(t.y[0]) }, Maths::Vec2S{ static_cast<float>(x), static_cast<float>(y) });
+			int e2 = edge(Maths::Vec2S{ static_cast<float>(t.x[0]), static_cast<float>(t.y[0]) }, Maths::Vec2S{ static_cast<float>(t.x[1]), static_cast<float>(t.y[1]) }, Maths::Vec2S{ static_cast<float>(x), static_cast<float>(y) });
 			if ((e0 | e1 | e2) < 0) continue;
 
 			float l0 = e0 * t.invArea;
@@ -230,7 +230,7 @@ void Renderer::rasterizeTri(const ScreenTri& t, const Tile& tile, const Material
 			float nDotH = n.Dot(halfVec);
 			if (nDotH < 0.0f) nDotH = 0.0f;
 
-			uint32_t src = mat.Shade(u, v, nDotL, nDotH);
+			uint32_t src = mat.shade(u, v, nDotL, nDotH);
 			uint32_t dst = framebuffer_[idx];
 
 			zbuffer_[idx] = z;
@@ -272,7 +272,7 @@ void Renderer::project(const ClipVertex* tri)
 		st.ny[k] = tri[k].normal.y * invW[k];
 		st.nz[k] = tri[k].normal.z * invW[k];
 	}
-	st.invArea = 1.0f / static_cast<float>area;
+	st.invArea = 1.0f / static_cast<float>(area);
 	st.minX = clampi(rMinX, 0, defaultWidth_ - 1);
 	st.maxX = clampi(rMaxX, 0, defaultWidth_ - 1);
 	st.minY = clampi(rMinY, 0, defaultHeight_ - 1);
@@ -297,7 +297,7 @@ void Renderer::drawMeshTextured(const Mesh& mesh, const Maths::Matrix4x4SIMD& mv
 	tris_.clear();
 
 	// Étape 2 : par triangle -> clipping, puis projection + dessin
-	const int faceCount = < static_cast<int>mesh.faces.size() / 3;
+	const int faceCount = static_cast<int>(mesh.faces.size()) / 3;
 	for (int f = 0; f < faceCount; f++) {
 		const int a = mesh.faces[f * 3 + 0];
 		const int b = mesh.faces[f * 3 + 1];
@@ -314,7 +314,7 @@ void Renderer::drawMeshTextured(const Mesh& mesh, const Maths::Matrix4x4SIMD& mv
 		// Clip contre le plan near -> 0, 1 ou 2 triangles
 		ClipVertex out[6];
 		int triCount;
-		ClipTriangleNear(v0, v1, v2, out, &triCount);
+		clipTriangleNear(v0, v1, v2, out, &triCount);
 
 		for (int t = 0; t < triCount; t++)
 			project(&out[t * 3]);
@@ -351,13 +351,13 @@ void Renderer::update()
 	computeFaceNormals(&mesh, faceNormals.data());
 	computeVertexNormals(&mesh, faceNormals.data(), vertexNormals.data());
 	
-	Renderer::window = glfwCreateWindow(defaultWidth, defaultHeight, "hello", NULL, NULL);
+	Renderer::window_ = glfwCreateWindow(defaultWidth_, defaultHeight_, "hello", NULL, NULL);
 
 	const uint64_t freq = glfwGetTimerFrequency();
 	const uint64_t start = glfwGetTimerValue();
 
 	// Projection and view stay fixed; only the model spins.
-	const float aspect = static_cast<float>defaultWidth_ / static_cast<float>defaultHeight_;
+	const float aspect = static_cast<float>(defaultWidth_) / static_cast<float>(defaultHeight_);
 
 	// 60-degree vertical field of view (radians() converts to the
 	// radians the math needs); window shape; near and far clip
@@ -385,7 +385,7 @@ void Renderer::update()
 		glfwPollEvents();
 
 		double seconds = static_cast<double>(glfwGetTimerValue() - start) / static_cast<double>(freq);   // tick / frequence = temps en seconde
-		float angle = static_cast<float>seconds;   // 1 radian par seconde
+		float angle = static_cast<float>(seconds);   // 1 radian par seconde
 
 		Maths::Matrix4x4SIMD model = Maths::Matrix4x4SIMD::RotationY(angle * 0.7f);
 		Maths::Matrix4x4SIMD mvp = projection * view * model;
