@@ -326,7 +326,7 @@ void Renderer::drawMeshTextured(const Mesh& mesh, const Maths::Matrix4x4SIMD& mv
 	 for (int row = 0; row < bmp.height; ++row)
 		 for (int col = 0; col < bmp.width; ++col)
 			 if (bmp.pixels[row * bmp.width + col])
-				 put_pixel(x + col, defaultHeight - 1 - (y + row), color);
+				 putPixel(x + col, defaultHeight_ - 1 - (y + row), color);
  }
 
 void Renderer::init()

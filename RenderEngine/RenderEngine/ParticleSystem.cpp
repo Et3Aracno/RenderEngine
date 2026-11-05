@@ -47,35 +47,26 @@ ParticlePool::ParticlePool(/*Emitter* emitter*/)
 
 	firstAvailable_ = &particleArray_[0];
 
-	for (int i = 0; i < poolSize_ - 1; i++)
+	for (int i = 0; i < poolSize_ - 1; i++){
 		particleArray_[i].setNext(&particleArray_[i + 1]);
+	}
 	particleArray_[poolSize_ - 1].setNext(nullptr);
-}
-
-ParticlePool::~ParticlePool()
-{
-	delete[] particleArray_;
 }
 
 bool ParticlePool::update(float dt, const Material& mat)
 {
-	bool anyAlive = false;
-
 	for (int i = 0; i < poolSize_; i++) {
-		Particle& p = particleArray_[i];
-		if (!p.isAlive()) continue;   // déjà dans la free list, on n'y touche pas
 
-		p.update(dt);
+		if (particleArray_[i].isAlive()) {
 
-		if (p.isAlive()) {
-			p.drawParticle(mat);
-			anyAlive = true;
+			particleArray_[i].update(dt);
+			particleArray_[i].drawParticle(mat);
+			return true;
 		}
 		else {
-			// vient de mourir : on la remet dans la free list, une seule fois
-			p.setNext(firstAvailable_);
-			firstAvailable_ = &p;
+			particleArray_[i].setNext(firstAvailable_);
+			firstAvailable_ = &particleArray_[i];
 		}
 	}
-	return anyAlive;
+	return false;
 }

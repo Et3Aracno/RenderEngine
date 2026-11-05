@@ -84,6 +84,7 @@ protected:
 	void clearAllBuffer();
 
 	static void rasterizeTri(const ScreenTri& t, const Tile& tile, const Material& mat);
+	void drawBitmap(const Bitmap& bmp, int x, int y, Color color);
 
 public:
 	static uint32_t framebuffer_[defaultWidth_ * defaultHeight_];
