@@ -12,7 +12,7 @@ uint32_t Material::shadeChannel(uint32_t texel, int shift,
     float val = c * diffuseK * (1.0f - metallic) + specColor * specK; // Calcul de la valeur finale du canal en combinant la couleur diffuse et spéculaire, en tenant compte de la valeur de metallic
 
     if (val > 1.0f) val = 1.0f;
-	return static_cast<uint32_t>(val * 255.0f);// Conversion de la valeur , on tronque à 255
+	return static_cast<uint32_t>(val * 255.0f);
 }
 
 uint32_t Material::rdPass(uint32_t src, uint32_t dst) const

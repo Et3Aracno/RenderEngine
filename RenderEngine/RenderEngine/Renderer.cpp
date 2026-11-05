@@ -341,7 +341,7 @@ void Renderer::update()
 
 	Font font;
 	font.loadFont("assets/SIXTY.TTF");
-	Bitmap label = font.renderText("Render Text working ?", 40.0f);
+	Bitmap label = font.renderText("Gaming Campus", 40.0f);
 
 	Mesh mesh;
 	MeshLoader::loadMesh("assets/spot.obj", mesh);
@@ -360,7 +360,7 @@ void Renderer::update()
 
 	Material glassMat;
 	glassMat.setAlbedoMap(texture);
-	glassMat.setOpacity(0.8f);
+	glassMat.setOpacity(0.3f);
 
 
 	window_ = glfwCreateWindow(defaultWidth_, defaultHeight_, "hello", NULL, NULL);
@@ -378,9 +378,7 @@ void Renderer::update()
 	const Maths::Vec3S up{ 0, 1, 0 };
 	const Maths::Matrix4x4SIMD view = Maths::Matrix4x4SIMD::LookAt(eye, target, up);
 	const Maths::Matrix4x4SIMD viewProj = projection * view;
-
-	const uint32_t bgColor = Color(26, 31, 41).getRgb();
-
+	setBcColor(Color(26, 31, 41));
 	glfwMakeContextCurrent(window_);
 	glfwSwapInterval(0);
 	buildTiles();
@@ -398,21 +396,19 @@ void Renderer::update()
 
 		// Un model par vache : Translation * Rotation = tourne sur place à sa position
 		const Maths::Matrix4x4SIMD rot = Maths::Matrix4x4SIMD::RotationY(angle * 0.7f);
-		const Maths::Matrix4x4SIMD modelOpaque =
-			Maths::Matrix4x4SIMD::Translation(Maths::Vec3S(0.0f, 0.0f, -0.7f)) * rot;
-		const Maths::Matrix4x4SIMD modelGlass =
-			Maths::Matrix4x4SIMD::Translation(Maths::Vec3S(0.0f, 0.0f, 0.7f)) * rot;
 
-		// Un seul clear par frame
-		clearColor(bgColor);
+		const Maths::Matrix4x4SIMD modelOpaque =
+			Maths::Matrix4x4SIMD::Translation(Maths::Vec3S(0.0f, 0.0f, -0.2f)) * rot;
+		const Maths::Matrix4x4SIMD modelGlass =
+			Maths::Matrix4x4SIMD::Translation(Maths::Vec3S(0.0f, 0.0f, 1.0f)) * rot;
+
+		clearColor(getBcColor().getRgb());
 		clearZbuffer();
 
-		// Opaque d'abord, transparent ensuite
-		drawMeshTextured(mesh, viewProj * modelOpaque, modelOpaque,
-			faceNormals.data(), vertexNormals.data(), opaqueMat);
 
-		drawMeshTextured(mesh, viewProj * modelGlass, modelGlass,
-			faceNormals.data(), vertexNormals.data(), glassMat);
+		drawMeshTextured(mesh, viewProj * modelOpaque, modelOpaque,faceNormals.data(), vertexNormals.data(), opaqueMat);
+
+		drawMeshTextured(mesh, viewProj * modelGlass, modelGlass,faceNormals.data(), vertexNormals.data(), glassMat);
 
 		drawBitmap(label, 20, 10, Color(200, 255, 255));
 

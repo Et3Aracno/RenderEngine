@@ -47,7 +47,7 @@ bool Font::parseTableDirectory()
     tables_.clear();
 
     uint32_t version = readU32(0);
-    if (version != 0x00010000 && version != 0x74727565) { // 0x74727565 = 'true' pour les collections de polices en ASCII, et 0x00010000 = version classique du format TTF
+    if (version != 0x00010000 && version != 0x74727565) {
         throw std::runtime_error("please load a ttf file");
     }
 
