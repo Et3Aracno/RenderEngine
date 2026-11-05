@@ -15,6 +15,7 @@
 #include "External Lib/MathLibrary/MathLib.h"
 #include "Color.h"
 #include "GLFW/glfw3.h"
+#include "Font.h"
 
 
 class Mesh;
@@ -70,9 +71,9 @@ private:
 	static inline int clampi(int v, int lo, int hi);
 	static void compute_face_normals(const Mesh* mesh, Maths::Vec3S* out);
 	static void compute_vertex_normals(const Mesh* mesh, const Maths::Vec3S* face_normals, Maths::Vec3S* out);
-
 	static void StartThreadPool(const Material& mat);
 	static void StopThreadPool();
+	void drawBitmap(const Bitmap& bmp, int x, int y, Color color);
 	static void WorkerLoop(const Material& mat);
 
 protected:
