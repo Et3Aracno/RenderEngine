@@ -19,6 +19,8 @@ inline Maths::Vec2S::Vec2S() : x(0), y(0) {}
 
 inline Maths::Vec2S::Vec2S(float _x, float _y) : x(_x), y(_y) {}
 
+inline Maths::Vec2S::Vec2S(int _x, int _y) : x(static_cast<float>(_x)), y(static_cast<float>(_y)) {}
+
 inline Maths::Vec2S::Vec2S(const Maths::Vec2S& other) {x = other.x; y = other.y; }
 
 inline Maths::Vec2S Maths::Vec2S::operator+(const Maths::Vec2S& rhs) const

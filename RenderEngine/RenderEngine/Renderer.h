@@ -1,25 +1,17 @@
 #pragma once
 #include <iostream>
 #include <vector>
-#include <algorithm>
 #include <atomic>
 #include <barrier>
 #include <memory>
 #include <thread>
-#include <stdint.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <math.h>
-#include <stdlib.h>
-#include <limits>
-#include "External Lib/MathLibrary/MathLib.h"
 #include "Color.h"
 #include "GLFW/glfw3.h"
 #include "Font.h"
 
 
-class Mesh;
-class ClipVertex;
+struct Mesh;
+struct ClipVertex;
 class Material;
 
 

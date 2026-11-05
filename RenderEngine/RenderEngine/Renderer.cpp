@@ -56,7 +56,7 @@ void Renderer::putPixel(int x, int y, Color color)
 
 int Renderer::edge(Maths::Vec2S v1, Maths::Vec2S v2, Maths::Vec2S p)
 {
-	return (v2.x - v1.x) * (p.y - v1.y) - (v2.y - v1.y) * (p.x - v1.x);
+	return static_cast<int>((v2.x - v1.x) * (p.y - v1.y) - (v2.y - v1.y) * (p.x - v1.x));
 }
 
 int Renderer::clampi(int v, int lo, int hi)
@@ -344,7 +344,7 @@ void Renderer::update()
 
 	Font font;
 	font.loadFont("assets/SIXTY.TTF");
-	Bitmap label = font.renderText("Maxime      LE   GOAT", 40.0f);
+	Bitmap label = font.renderText("Render Text working ?", 40.0f);
 
 	Mesh mesh;
 	MeshLoader::loadMesh("assets/spot.obj", mesh);

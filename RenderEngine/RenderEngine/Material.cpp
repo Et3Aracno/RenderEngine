@@ -19,7 +19,7 @@ uint32_t Material::rdPass(uint32_t src, uint32_t dst) const
 {
     Color cSrc(src);
     Color cDst(dst);
-    const float alpha = getOpacity();
+	const float alpha = cSrc.a() / 255.0f;
     const float invAlpha = 1.0f - alpha;
 
     uint32_t r = static_cast<uint32_t>(alpha * cSrc.r() + invAlpha * cDst.r() + 0.5f);
