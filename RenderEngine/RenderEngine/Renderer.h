@@ -44,6 +44,7 @@ private:
 	static inline std::unique_ptr<std::barrier<>> endBarrier_;
 	static inline std::atomic<int>  nextTile_{ 0 };
 	static inline std::atomic<bool> shouldQuit_{ false };
+	static inline const Material* currentMaterial_ = nullptr;
 
 	static inline std::vector<Tile>      tiles_;
 	static inline std::vector<ScreenTri> tris_;
@@ -57,9 +58,9 @@ private:
 	static void computeFaceNormals(const Mesh* mesh, Maths::Vec3S* out);
 	static void computeVertexNormals(const Mesh* mesh, const Maths::Vec3S* faceNormals, Maths::Vec3S* out);
 
-	static void startThreadPool(const Material& mat);
+	static void startThreadPool();
 	static void stopThreadPool();
-	static void workerLoop(const Material& mat);
+	static void workerLoop();
 
 protected:
 	static void buildTiles(); // Done once or window changes size

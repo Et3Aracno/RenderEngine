@@ -124,15 +124,7 @@ void Renderer::buildTiles()
 // clear + rasterize
 void Renderer::renderTile(int tileIndex, const Material& mat)
 {
-	static const uint32_t bgColor = Color(26, 31, 41).getRgb();   // init thread-safe
 	const Tile& tile = tiles_[tileIndex];
-
-	for (int y = tile.y0; y < tile.y1; y++) {
-		std::fill(framebuffer_ + y * defaultWidth_ + tile.x0, framebuffer_ + y * defaultWidth_ + tile.x1, bgColor);
-		std::fill(zbuffer_ + y * defaultWidth_ + tile.x0, zbuffer_ + y * defaultWidth_ + tile.x1, std::numeric_limits<float>::max());
-	}
-
-	// si pas ds boxTile dégage
 	for (const ScreenTri& tri : tris_)
 		rasterizeTri(tri, tile, mat);
 }
@@ -146,23 +138,24 @@ void Renderer::processTiles(const Material& mat)
 
 void Renderer::renderAllTiles(const Material& mat)
 {
+	currentMaterial_ = &mat;
 	nextTile_ = 0;
 	startBarrier_->arrive_and_wait();
 	processTiles(mat);
 	endBarrier_->arrive_and_wait();
 }
 
-void Renderer::workerLoop(const Material& mat)
+void Renderer::workerLoop()
 {
 	for (;;) {
 		startBarrier_->arrive_and_wait();
 		if (shouldQuit_.load()) return;
-		processTiles(mat);
+		processTiles(*currentMaterial_);
 		endBarrier_->arrive_and_wait();
 	}
 }
 
-void Renderer::startThreadPool(const Material& mat)
+void Renderer::startThreadPool()
 {
 	int threadCount = static_cast<int>(std::thread::hardware_concurrency());
 	if (threadCount < 1) threadCount = 1;
@@ -171,7 +164,7 @@ void Renderer::startThreadPool(const Material& mat)
 	startBarrier_ = std::make_unique<std::barrier<>>(workers + 1);
 	endBarrier_ = std::make_unique<std::barrier<>>(workers + 1);
 	for (int i = 0; i < workers; i++)
-		threads_.emplace_back(workerLoop, std::cref(mat));   // cref : pas de copie du Material
+		threads_.emplace_back(workerLoop);   // cref : pas de copie du Material
 }
 
 void Renderer::stopThreadPool()
@@ -193,6 +186,8 @@ void Renderer::rasterizeTri(const ScreenTri& t, const Tile& tile, const Material
 	const Maths::Vec3S light = (Maths::Vec3S(0.4f, 0.8f, 0.45f)).Normalize();
 	const Maths::Vec3S viewDir = Maths::Vec3S(0, 0, 1);
 	const Maths::Vec3S halfVec = (light + viewDir).Normalize();
+
+	const bool writeZ = mat.getOpacity() >= 1.0f;
 
 	for (int y = minY; y <= maxY; y++) {
 		for (int x = minX; x <= maxX; x++) {
@@ -230,10 +225,10 @@ void Renderer::rasterizeTri(const ScreenTri& t, const Tile& tile, const Material
 			if (nDotH < 0.0f) nDotH = 0.0f;
 
 			uint32_t src = mat.shade(u, v, nDotL, nDotH);
-			uint32_t dst = framebuffer_[idx];
+			if ((src >> 24) == 0) continue;    // texel totalement transparent
 
-			zbuffer_[idx] = z;
-			framebuffer_[idx] = mat.rdPass(src, dst);
+			framebuffer_[idx] = mat.rdPass(src, framebuffer_[idx]);
+			if (writeZ) zbuffer_[idx] = z;
 		}
 	}
 }
@@ -289,8 +284,10 @@ void Renderer::drawMeshTextured(const Mesh& mesh, const Maths::Matrix4x4SIMD& mv
 	std::vector<Maths::Vec4S> clipV(vertexCount);
 	std::vector<Maths::Vec3S> normalWorld(vertexCount);
 	for (int i = 0; i < vertexCount; i++) {
+
 		clipV[i] = mvp * Maths::Vec4S::FromPoint(mesh.verts[i]);
-		normalWorld[i] = model * vertexNormals[i];
+		const Maths::Vec4S n = model * Maths::Vec4S(vertexNormals[i].x, vertexNormals[i].y, vertexNormals[i].z, 0.0f);
+		normalWorld[i] = Maths::Vec3S(n.x, n.y, n.z).Normalize();
 	}
 
 	tris_.clear();
@@ -338,7 +335,7 @@ void Renderer::init()
 
 void Renderer::update()
 {
-	// Les load vont etre deplacer dans un loader global avec des vec de texture et font en shared ce qui va permettre de juste selectionner par "id" chaque élément pour le draw un struct sera plus opti pour ça
+
 	auto texture = std::make_shared<Texture>();
 	texture->load("assets/spot_texture.png");
 
@@ -349,71 +346,85 @@ void Renderer::update()
 	Mesh mesh;
 	MeshLoader::loadMesh("assets/spot.obj", mesh);
 
-	Material material;
-	material.setAlbedoMap(texture);
-	material.setOpacity(0.9f);
-
-	// One model-space normal per triangle, computed once.
+	
 	std::vector<Maths::Vec3S> faceNormals(mesh.faces.size() / 3);
 	std::vector<Maths::Vec3S> vertexNormals(mesh.verts.size());
+
 	computeFaceNormals(&mesh, faceNormals.data());
 	computeVertexNormals(&mesh, faceNormals.data(), vertexNormals.data());
+
 	
-	Renderer::window_ = glfwCreateWindow(defaultWidth_, defaultHeight_, "hello", NULL, NULL);
+	Material opaqueMat;
+	opaqueMat.setAlbedoMap(texture);
+	opaqueMat.setOpacity(1.0f);
+
+	Material glassMat;
+	glassMat.setAlbedoMap(texture);
+	glassMat.setOpacity(0.8f);
+
+
+	window_ = glfwCreateWindow(defaultWidth_, defaultHeight_, "hello", NULL, NULL);
 
 	const uint64_t freq = glfwGetTimerFrequency();
 	const uint64_t start = glfwGetTimerValue();
 
-	// Projection and view stay fixed; only the model spins.
 	const float aspect = static_cast<float>(defaultWidth_) / static_cast<float>(defaultHeight_);
 
-	// 60-degree vertical field of view (radians() converts to the
-	// radians the math needs); window shape; near and far clip
-	// distances. See README section 5.6.
-	const Maths::Matrix4x4SIMD projection = Maths::Matrix4x4SIMD::Perspective(Maths::Matrix4x4SIMD::radians(60.0f), aspect, 0.1f, 100.0f);
+	const Maths::Matrix4x4SIMD projection =
+	Maths::Matrix4x4SIMD::Perspective(Maths::Matrix4x4SIMD::radians(60.0f), aspect, 0.1f, 100.0f);
 
-	// Camera: positioned 3 units back on +z (eye), aimed at the
-	// origin (target), with world-up being +y. See README section 5.10.
 	const Maths::Vec3S eye{ 0, 0, 3 };
 	const Maths::Vec3S target{ 0, 0, 0 };
 	const Maths::Vec3S up{ 0, 1, 0 };
 	const Maths::Matrix4x4SIMD view = Maths::Matrix4x4SIMD::LookAt(eye, target, up);
+	const Maths::Matrix4x4SIMD viewProj = projection * view;
 
-	glfwMakeContextCurrent(window_);  // avant glfwSwapInterval
+	const uint32_t bgColor = Color(26, 31, 41).getRgb();
+
+	glfwMakeContextCurrent(window_);
+	glfwSwapInterval(0);
 	buildTiles();
-	startThreadPool(material);
+	startThreadPool();
 
 	double lastTime = glfwGetTime();
 	int frameCount = 0;
 
-	Color color(16, 16, 24);
-	glfwSwapInterval(0);
-
+	// boucle glfw
 	while (!glfwWindowShouldClose(window_)) {
 		glfwPollEvents();
 
-		double seconds = static_cast<double>(glfwGetTimerValue() - start) / static_cast<double>(freq);   // tick / frequence = temps en seconde
-		float angle = static_cast<float>(seconds);   // 1 radian par seconde
+		const double seconds = static_cast<double>(glfwGetTimerValue() - start) / static_cast<double>(freq);
+		const float angle = static_cast<float>(seconds);
 
-		Maths::Matrix4x4SIMD model = Maths::Matrix4x4SIMD::RotationY(angle * 0.7f);
-		Maths::Matrix4x4SIMD mvp = projection * view * model;
+		// Un model par vache : Translation * Rotation = tourne sur place à sa position
+		const Maths::Matrix4x4SIMD rot = Maths::Matrix4x4SIMD::RotationY(angle * 0.7f);
+		const Maths::Matrix4x4SIMD modelOpaque =
+			Maths::Matrix4x4SIMD::Translation(Maths::Vec3S(0.0f, 0.0f, -0.7f)) * rot;
+		const Maths::Matrix4x4SIMD modelGlass =
+			Maths::Matrix4x4SIMD::Translation(Maths::Vec3S(0.0f, 0.0f, 0.7f)) * rot;
 
-		drawMeshTextured(mesh, mvp, model, faceNormals.data(), vertexNormals.data(), material);
+		// Un seul clear par frame
+		clearColor(bgColor);
+		clearZbuffer();
+
+		// Opaque d'abord, transparent ensuite
+		drawMeshTextured(mesh, viewProj * modelOpaque, modelOpaque,
+			faceNormals.data(), vertexNormals.data(), opaqueMat);
+
+		drawMeshTextured(mesh, viewProj * modelGlass, modelGlass,
+			faceNormals.data(), vertexNormals.data(), glassMat);
+
 		drawBitmap(label, 20, 10, Color(200, 255, 255));
 
 		glDrawPixels(defaultWidth_, defaultHeight_, GL_RGBA, GL_UNSIGNED_BYTE, framebuffer_);
 		glfwSwapBuffers(window_);
 
-		double currentTime = glfwGetTime();
+		const double currentTime = glfwGetTime();
 		frameCount++;
-
 		if (currentTime - lastTime >= 1) {
-			double fps = frameCount / (currentTime - lastTime);
-
 			char title[256];
-			snprintf(title, sizeof(title), "FPS Counter [%.1f FPS]", fps);
+			snprintf(title, sizeof(title), "FPS Counter [%.1f FPS]", frameCount / (currentTime - lastTime));
 			glfwSetWindowTitle(window_, title);
-
 			frameCount = 0;
 			lastTime = currentTime;
 		}
