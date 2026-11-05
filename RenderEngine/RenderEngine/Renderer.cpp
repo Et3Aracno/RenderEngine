@@ -398,7 +398,7 @@ void Renderer::update()
 		const Maths::Matrix4x4SIMD rot = Maths::Matrix4x4SIMD::RotationY(angle * 0.7f);
 
 		const Maths::Matrix4x4SIMD modelOpaque =
-			Maths::Matrix4x4SIMD::Translation(Maths::Vec3S(0.0f, 0.0f, -0.2f)) * rot;
+			Maths::Matrix4x4SIMD::Translation(Maths::Vec3S(4.0f, 0.0f, -15.0f)) * rot;
 		const Maths::Matrix4x4SIMD modelGlass =
 			Maths::Matrix4x4SIMD::Translation(Maths::Vec3S(0.0f, 0.0f, 1.0f)) * rot;
 

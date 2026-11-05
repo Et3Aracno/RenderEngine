@@ -35,7 +35,9 @@ private:
     size_t idRangeOffsetAddr_ = 0;
 
     static void fill(const std::vector<std::vector<Maths::Vec2S>>& contours, Bitmap& bmp);
+
 protected:
+
     bool parseCmap();
     size_t cmapSubtable_ = 0;     // adresse absolue (dans data_) de la sous-table format 4
 
@@ -50,14 +52,10 @@ protected:
 
 public:
 
-
-    
     uint16_t unitsPerEm_ = 0; //échelle de la police de caractère
     int16_t indexToLocFormat_ = 0; // 0 = format court donc on le met en readU16 * 2 sinon si c'est 1 c'est le format long et on le laisse en readU32 
     uint16_t numGlyphs_ = 0;
     static std::vector<std::vector<Maths::Vec2S>> flattenOutline(const GlyphOutline& g, int steps = 8);
-
-
 
     bool loadFont(const std::string& path);
     size_t getDataSize()const { return data_.size(); }
