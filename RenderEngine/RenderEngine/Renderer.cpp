@@ -5,6 +5,7 @@
 #include "Material.h"
 #include <stdexcept>
 #include <functional>
+#include <iostream>
 
 Renderer* Renderer::instance_ = nullptr;
 uint32_t  Renderer::framebuffer_[Renderer::defaultWidth_ * Renderer::defaultHeight_];
@@ -239,8 +240,8 @@ void Renderer::project(const ClipVertex* tri)
 	float ndcZ[3], invW[3];
 	for (int k = 0; k < 3; k++) {
 		float inv = 1.0f / tri[k].clip.w;
-		sx[k] = (int)((tri[k].clip.x * inv + 1.0f) * 0.5f * defaultWidth_);
-		sy[k] = (int)((tri[k].clip.y * inv + 1.0f) * 0.5f * defaultHeight_);
+		sx[k] = static_cast<int>((tri[k].clip.x * inv + 1.0f) * 0.5f * defaultWidth_);
+		sy[k] = static_cast<int>((tri[k].clip.y * inv + 1.0f) * 0.5f * defaultHeight_);
 		ndcZ[k] = tri[k].clip.z * inv;
 		invW[k] = inv;
 	}
@@ -278,7 +279,7 @@ void Renderer::project(const ClipVertex* tri)
 void Renderer::drawMeshTextured(const Mesh& mesh, const Maths::Matrix4x4SIMD& mvp, Maths::Matrix4x4SIMD model,
 	Maths::Vec3S* faceNormals, Maths::Vec3S* vertexNormals, const Material& mat)
 {
-	const int vertexCount = (int)mesh.verts.size();
+	const int vertexCount = static_cast<int>(mesh.verts.size());
 
 	// Étape 1 : par sommet du mesh -> clip space seulement (PAS de division par w)
 	std::vector<Maths::Vec4S> clipV(vertexCount);

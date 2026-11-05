@@ -1,5 +1,4 @@
 #pragma once
-#include <iostream>
 #include <vector>
 #include <atomic>
 #include <barrier>
@@ -8,6 +7,7 @@
 #include "Color.h"
 #include "GLFW/glfw3.h"
 #include "Font.h"
+#include "External Lib/MathLibrary/MathLib.h"
 
 
 struct Mesh;
@@ -51,7 +51,7 @@ private:
 	static inline int tilesX_ = 0, tilesY_ = 0;
 
 	static int  edge(Maths::Vec2S v1, Maths::Vec2S v2, Maths::Vec2S p);
-	static void clearColor(uint32_t color); //////////// A VOIR
+	static void clearColor(uint32_t color);
 	static void clearZbuffer();
 
 	static int  clampi(int v, int lo, int hi);

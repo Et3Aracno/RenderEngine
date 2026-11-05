@@ -22,7 +22,7 @@ struct Bitmap
 {
     int width, height;
     std::vector<uint8_t> pixels;
-    Bitmap(int w, int h) : width(w), height(h), pixels(w* h, 0) {}
+    Bitmap(int w, int h) : width(w), height(h), pixels(w * h, 0) {}
 };
 
 class Font

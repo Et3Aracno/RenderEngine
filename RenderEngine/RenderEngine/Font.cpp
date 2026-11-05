@@ -477,7 +477,7 @@ void Font::fill(const std::vector<std::vector<Maths::Vec2S>>& contours, Bitmap& 
         for (const auto& poly : contours)
             for (size_t i = 0; i < poly.size(); ++i)
             {
-                Maths::Vec2S a = poly[i], b = poly[(i + 1) % poly.size()];
+				Maths::Vec2S a = poly[i], b = poly[(i + 1) % poly.size()]; // modulo pour revenir au premier point quand on est sur le dernier , on l'utilise pour le remplissage de la police de caractère
                 if ((a.y <= sy) != (b.y <= sy))
                     xs.push_back(a.x + (sy - a.y) / (b.y - a.y) * (b.x - a.x));
             }
@@ -485,8 +485,8 @@ void Font::fill(const std::vector<std::vector<Maths::Vec2S>>& contours, Bitmap& 
 
         for (size_t i = 0; i + 1 < xs.size(); i += 2)
         {
-            int x0 = std::max(0, int(std::ceil(xs[i] - 0.5f)));
-            int x1 = std::min(bmp.width, int(std::ceil(xs[i + 1] - 0.5f)));
+            int x0 = std::max(0, static_cast<int>(std::ceil(xs[i] - 0.5f)));
+            int x1 = std::min(bmp.width, static_cast<int>(std::ceil(xs[i + 1] - 0.5f)));
             for (int x = x0; x < x1; ++x)
                 bmp.pixels[y * bmp.width + x] = 255;
         }
@@ -504,7 +504,7 @@ Bitmap Font::renderText(const std::string& text, float pixelSize) const
     for (char c : text)
         total += getAdvanceWidth(getGlyphIndex((unsigned char)c)) * scale;
 
-    Bitmap bmp(int(std::ceil(total)) + 1, int(std::ceil(ascent + descent)) + 1);
+    Bitmap bmp(static_cast<int>(std::ceil(total)) + 1, static_cast<int>(std::ceil(ascent + descent)) + 1); //ceil() arrondit à l'entier supérieur.
 
     float penX = 0;
     for (char c : text)

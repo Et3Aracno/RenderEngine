@@ -3,7 +3,7 @@
 #include <cmath>
 
 // shift = position du canal dans le texel : 0, 8 ou 16.
-uint32_t Material::shadeChannel(uint32_t texel, int shift,
+uint32_t Material::shadeChannel(uint32_t texel, int shift, //
     float diffuseK, float specK, float metallic)
 {
 	float c = ((texel >> shift) & 0xFF) / 255.0f;// Normalisation du canal de couleur
@@ -15,7 +15,7 @@ uint32_t Material::shadeChannel(uint32_t texel, int shift,
 	return static_cast<uint32_t>(val * 255.0f);
 }
 
-uint32_t Material::rdPass(uint32_t src, uint32_t dst) const
+uint32_t Material::rdPass(uint32_t src, uint32_t dst) const //rending pass : src = couleur du matériau, dst = couleur du framebuffer
 {
     Color cSrc(src);
     Color cDst(dst);
