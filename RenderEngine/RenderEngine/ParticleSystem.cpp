@@ -1,63 +1,81 @@
 #include "ParticleSystem.h"
 
-Particle::Particle() : Next(nullptr) {}
+Particle::Particle() : next_(nullptr) {}
 
-void Particle::update(float dt){
-	Life--;
+void Particle::update(float dt)
+{
+	life_ -= dt;   // life_ en secondes, indépendant du framerate
 
-	/*attributes.vel.x = speed * sin(theta) * cos(phi);
-	attributes.vel.y = speed * sin(phi);
-	attributes.vel.z = speed * cos(theta) * cos(phi);*/
+	/*attributes_.vel.x = speed * sin(theta) * cos(phi);
+	attributes_.vel.y = speed * sin(phi);
+	attributes_.vel.z = speed * cos(theta) * cos(phi);*/
 
-	attributes.pos += attributes.vel * dt;
+	attributes_.pos += attributes_.vel * dt;
 }
 
-void Particle::DrawParticle(const Material& mat){
-	    
+void Particle::drawParticle(const Material& mat)
+{
+
 }
 
-void Particle::Init(const Maths::Vec3S& pos, const Maths::Vec3S& vel){
-	attributes.pos = pos;
-	attributes.vel = vel;
+void Particle::init(const Maths::Vec3S& pos, const Maths::Vec3S& vel, float life)
+{
+	attributes_.pos = pos;
+	attributes_.vel = vel;
+	life_ = life;
 }
 
-void ParticlePool::Generate(){
-	assert(FirstAvailable != nullptr);
+void ParticlePool::generate(const Maths::Vec3S& pos, const Maths::Vec3S& vel, float life)
+{
+	if (firstAvailable_ == nullptr) return;   // pool plein : on ignore le spawn
 
-	Particle* newParticle = FirstAvailable;
-	FirstAvailable = FirstAvailable->GetNext();
+	Particle* newParticle = firstAvailable_;
+	firstAvailable_ = newParticle->getNext();   // lire next_ AVANT init (même mémoire)
 
-	//newParticle->Init(position, velocity); /////////// More to see with the emitter & if parameters necessay
+	newParticle->init(pos, vel, life);          // plus d'emitter pour l'instant : paramètres directs
 }
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-ParticlePool::ParticlePool(/*Emitter* emitter*/) {
-	// poolSize = Emitter->GetPoolSize();
-	ParticleArray = new Particle[poolSize];
+ParticlePool::ParticlePool(/*Emitter* emitter*/)
+{
+	// poolSize_ = emitter->getPoolSize();
+	poolSize_ = 1024;   // provisoire
+	particleArray_ = new Particle[poolSize_];
 
-	FirstAvailable = &ParticleArray[0];
+	firstAvailable_ = &particleArray_[0];
 
-	for (int i = 0; i < poolSize - 1; i++) {
-		ParticleArray[i].SetNext(&ParticleArray[i + 1]);
+	for (int i = 0; i < poolSize_ - 1; i++)
+		particleArray_[i].setNext(&particleArray_[i + 1]);
+	particleArray_[poolSize_ - 1].setNext(nullptr);
+}
 
-	}
+ParticlePool::~ParticlePool()
+{
+	delete[] particleArray_;
 }
 
 bool ParticlePool::update(float dt, const Material& mat)
 {
-	for (int i = 0; i < poolSize; i++) {
-		if (ParticleArray[i].isAlive()){
-			ParticleArray[i].update(dt);
-			ParticleArray[i].DrawParticle(mat);
-			return true;
+	bool anyAlive = false;
+
+	for (int i = 0; i < poolSize_; i++) {
+		Particle& p = particleArray_[i];
+		if (!p.isAlive()) continue;   // déjà dans la free list, on n'y touche pas
+
+		p.update(dt);
+
+		if (p.isAlive()) {
+			p.drawParticle(mat);
+			anyAlive = true;
 		}
 		else {
-			ParticleArray[i].SetNext(FirstAvailable);
-			FirstAvailable = &ParticleArray[i];
+			// vient de mourir : on la remet dans la free list, une seule fois
+			p.setNext(firstAvailable_);
+			firstAvailable_ = &p;
 		}
 	}
-	return false;
+	return anyAlive;
 }

@@ -11,11 +11,11 @@ struct ParticleAttributes {
 };
 
 class Particle {
-	float Life = 0.f;  
+	float life_ = 0.f;
 
 	union {
-		ParticleAttributes attributes;
-		Particle* Next;
+		ParticleAttributes attributes_;
+		Particle* next_;
 	};
 
 public:
@@ -23,34 +23,32 @@ public:
 	~Particle() = default;
 
 	void update(float dt);
-	void DrawParticle(const Material& mat);
-	void Init(const Maths::Vec3S& pos, const Maths::Vec3S& vel);
+	void drawParticle(const Material& mat);
+	void init(const Maths::Vec3S& pos, const Maths::Vec3S& vel, float life);
 
-	bool isAlive() { return Life > 0; };
-	Particle* GetNext() { return Next; };
-	void SetNext(Particle* next) { Next = next; };
+	bool isAlive() const { return life_ > 0.f; }
+	Particle* getNext() const { return next_; }
+	void setNext(Particle* next) { next_ = next; }
 };
 
 
 class ParticlePool {
-	int poolSize = 0;
-	Particle* FirstAvailable = nullptr;
-	Particle* ParticleArray = nullptr;
+	int poolSize_ = 0;
+	Particle* firstAvailable_ = nullptr;
+	Particle* particleArray_ = nullptr;
 
 public:
 	ParticlePool(/*Emitter* emitter*/); //// A CHANGER
 	~ParticlePool() = default;
 
-	void Generate();
+	void generate(const Maths::Vec3S& pos, const Maths::Vec3S& vel, float life);
 	bool update(float dt, const Material& mat);
 };
 
 
+class ParticleSystem {
+	ParticlePool pool_;
+	Material mat_;
 
-class ParticleSystem{
-	ParticlePool pool;
-	Material mat;
-
-	void Render(const Material& mat);
+	void render(const Material& mat);
 };
-

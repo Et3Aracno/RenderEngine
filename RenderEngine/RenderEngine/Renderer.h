@@ -22,84 +22,73 @@ class ClipVertex;
 class Material;
 
 
-
 struct ScreenTri {
 	int   x[3], y[3];
 	float z[3], iw[3];
 	float uw[3], vw[3];
 	float nx[3], ny[3], nz[3];
 	float invArea;
-	int   minx, miny, maxx, maxy;
+	int   minX, minY, maxX, maxY;
 };
+
 
 struct Tile { int x0, y0, x1, y1; };
 
 
-
 class Renderer {
-
 private:
+	static constexpr int defaultWidth_ = 800;
+	static constexpr int defaultHeight_ = 600;
+	static constexpr int tileSize_ = 32; // 32 ou 64 mais same pour le test a voir avec ajout du binning
+	static constexpr int sizeWxH_ = defaultWidth_ * defaultHeight_;
 
-	//
-	static constexpr int defaultWidth = 800;
-	static constexpr int defaultHeight = 600;
-	static constexpr int tileSize = 32; // 32 ou 64 mais same pour le test a voir ave ajout du binning
-	static constexpr int SizeWxH = defaultWidth * defaultHeight;
-	Color defaultBcColor;
-	static Renderer* r_instance;
-	GLFWwindow* window = nullptr;
+	Color defaultBcColor_;
+	static Renderer* instance_;
+	GLFWwindow* window_ = nullptr;
 
-	static inline std::vector<std::thread> threads;
-	static inline std::unique_ptr<std::barrier<>> startBarrier;
-	static inline std::unique_ptr<std::barrier<>> endBarrier;
-	static inline std::atomic<int> nextTile{ 0 };
-	static inline std::atomic<bool> quit{ false };
-	
+	static inline std::vector<std::thread> threads_;
+	static inline std::unique_ptr<std::barrier<>> startBarrier_;
+	static inline std::unique_ptr<std::barrier<>> endBarrier_;
+	static inline std::atomic<int>  nextTile_{ 0 };
+	static inline std::atomic<bool> shouldQuit_{ false };
 
-	static inline std::vector<Tile> tiles;
-	static inline std::vector<ScreenTri> tris;
-	static inline int tilesX, tilesY;
+	static inline std::vector<Tile>      tiles_;
+	static inline std::vector<ScreenTri> tris_;
+	static inline int tilesX_ = 0, tilesY_ = 0;
 
-	//
-
-
-	//
-	static int edge(Maths::Vec2S v1, Maths::Vec2S v2, Maths::Vec2S P);
+	static int  edge(Maths::Vec2S v1, Maths::Vec2S v2, Maths::Vec2S p);
 	static void clearColor(uint32_t color); //////////// A VOIR
 	static void clearZbuffer();
-	static inline int clampi(int v, int lo, int hi);
-	static void compute_face_normals(const Mesh* mesh, Maths::Vec3S* out);
-	static void compute_vertex_normals(const Mesh* mesh, const Maths::Vec3S* face_normals, Maths::Vec3S* out);
+	static int  clampi(int v, int lo, int hi);
+	static void computeFaceNormals(const Mesh* mesh, Maths::Vec3S* out);
+	static void computeVertexNormals(const Mesh* mesh, const Maths::Vec3S* faceNormals, Maths::Vec3S* out);
 
-	static void StartThreadPool(const Material& mat);
-	static void StopThreadPool();
-	static void WorkerLoop(const Material& mat);
+	static void startThreadPool(const Material& mat);
+	static void stopThreadPool();
+	static void workerLoop(const Material& mat);
 
 protected:
+	static void buildTiles(); // Done once or window changes size
+	static void renderTile(int tileIndex, const Material& mat);
+	static void processTiles(const Material& mat);
+	static void renderAllTiles(const Material& mat);
 
-	static void BuildTiles(); // Done once or window changes size
-	static void RenderTile(int tileIndex, const Material& mat);
-	static inline void ProcessTiles(const Material& mat);
-	static void RenderAllTiles(const Material& mat);
-
-	static void drawMeshTextured(const Mesh& mesh, const Maths::Matrix4x4SIMD& mvp, Maths::Matrix4x4SIMD model, Maths::Vec3S* face_normals, Maths::Vec3S* vertex_normals, const Material& mat);
+	static void drawMeshTextured(const Mesh& mesh, const Maths::Matrix4x4SIMD& mvp, Maths::Matrix4x4SIMD model,
+		Maths::Vec3S* faceNormals, Maths::Vec3S* vertexNormals, const Material& mat);
 	static void project(const ClipVertex* tri);
 	void drawPx(int sizeX, int sizeY);
-	static inline void put_pixel(int x, int y, Color color);
-	static void draw_line(Maths::Vec2S x , Maths::Vec2S y, uint32_t color);
+	static void putPixel(int x, int y, Color color);
+	static void drawLine(Maths::Vec2S v1, Maths::Vec2S v2, uint32_t color);
 	void clearAllBuffer();
 
-	static void RasterizeTri(const ScreenTri& t, const Tile& tile, const Material& mat);
-
+	static void rasterizeTri(const ScreenTri& t, const Tile& tile, const Material& mat);
 
 public:
-
-	static uint32_t framebuffer[defaultWidth * defaultHeight];
-	static float    zbuffer[defaultWidth * defaultHeight];
+	static uint32_t framebuffer_[defaultWidth_ * defaultHeight_];
+	static float    zbuffer_[defaultWidth_ * defaultHeight_];
 
 	void init();
 	void update();
-
 
 	Renderer();
 	~Renderer();
@@ -107,11 +96,9 @@ public:
 	Renderer(const Renderer&) = delete;
 	Renderer& operator=(const Renderer&) = delete;
 
-	static Renderer* Instance() { return r_instance; }
+	static Renderer* instance() { return instance_; }
 
-
-	Color GetBcColor() const { return defaultBcColor; }
-	void SetBcColor(Color color) { defaultBcColor = color; }
-	static constexpr int GetSizeWxH() { return SizeWxH; }
-
+	Color getBcColor() const { return defaultBcColor_; }
+	void setBcColor(Color color) { defaultBcColor_ = color; }
+	static constexpr int getSizeWxH() { return sizeWxH_; }
 };

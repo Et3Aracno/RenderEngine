@@ -9,7 +9,8 @@ struct ClipVertex {
 };
 
 // r = a + t * (b - a), pour TOUS les attributs
-static inline ClipVertex ClipLerp(const ClipVertex& a, const ClipVertex& b, float t) {
+static inline ClipVertex clipLerp(const ClipVertex& a, const ClipVertex& b, float t)
+{
 	ClipVertex r;
 	r.clip.x = a.clip.x + t * (b.clip.x - a.clip.x);
 	r.clip.y = a.clip.y + t * (b.clip.y - a.clip.y);
@@ -24,48 +25,50 @@ static inline ClipVertex ClipLerp(const ClipVertex& a, const ClipVertex& b, floa
 }
 
 // Distance signée au plan near : >= 0 = devant (on garde)
-static inline float ClipNearDist(const ClipVertex& v) {
+static inline float clipNearDist(const ClipVertex& v)
+{
 	return v.clip.z + v.clip.w;
 }
 
 // Sutherland-Hodgman contre le plan near.
 // Écrit 0, 3 ou 6 sommets dans out (= 0, 1 ou 2 triangles). out doit faire >= 6.
-static inline void ClipTriangleNear(const ClipVertex& v0, const ClipVertex& v1, const ClipVertex& v2,
-	ClipVertex* out, int* outNTris) {
+static inline void clipTriangleNear(const ClipVertex& v0, const ClipVertex& v1, const ClipVertex& v2,
+	ClipVertex* out, int* outTriCount)
+{
 	const ClipVertex in[3] = { v0, v1, v2 };
 	ClipVertex poly[4];
-	int n = 0;
+	int count = 0;
 
 	for (int e = 0; e < 3; e++) {
 		const ClipVertex& a = in[e];
 		const ClipVertex& b = in[(e + 1) % 3];
-		float da = ClipNearDist(a);
-		float db = ClipNearDist(b);
+		float da = clipNearDist(a);
+		float db = clipNearDist(b);
 		bool aIn = da >= 0.0f;
 		bool bIn = db >= 0.0f;
 
 		if (aIn && bIn) {                 // les deux dedans : on garde b
-			poly[n++] = b;
+			poly[count++] = b;
 		}
-		else if (aIn && !bIn) {         // on sort : point d'intersection
-			poly[n++] = ClipLerp(a, b, da / (da - db));
+		else if (aIn && !bIn) {           // on sort : point d'intersection
+			poly[count++] = clipLerp(a, b, da / (da - db));
 		}
-		else if (!aIn && bIn) {         // on rentre : intersection puis b
-			poly[n++] = ClipLerp(a, b, da / (da - db));
-			poly[n++] = b;
+		else if (!aIn && bIn) {           // on rentre : intersection puis b
+			poly[count++] = clipLerp(a, b, da / (da - db));
+			poly[count++] = b;
 		}                                 // les deux dehors : rien
 	}
 
-	if (n == 3) {
+	if (count == 3) {
 		out[0] = poly[0]; out[1] = poly[1]; out[2] = poly[2];
-		*outNTris = 1;
+		*outTriCount = 1;
 	}
-	else if (n == 4) {                  // quad -> 2 triangles (0,1,2) et (0,2,3)
+	else if (count == 4) {                // quad -> 2 triangles (0,1,2) et (0,2,3)
 		out[0] = poly[0]; out[1] = poly[1]; out[2] = poly[2];
 		out[3] = poly[0]; out[4] = poly[2]; out[5] = poly[3];
-		*outNTris = 2;
+		*outTriCount = 2;
 	}
 	else {
-		*outNTris = 0;
+		*outTriCount = 0;
 	}
 }

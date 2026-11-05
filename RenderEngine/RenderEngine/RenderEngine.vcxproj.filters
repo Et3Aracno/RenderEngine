@@ -126,7 +126,7 @@
       <Filter>Headers\ParticuleSystem</Filter>
     </ClInclude>
     <ClInclude Include="ParticleSystem.h">
-      <Filter>Headers\Renderer</Filter>
+      <Filter>Headers\ParticuleSystem</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
