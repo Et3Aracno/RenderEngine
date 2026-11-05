@@ -31,11 +31,11 @@ uint32_t Color::colorScale(uint32_t c, float k)
     if (k < 0.0f) k = 0.0f;
     if (k > 1.0f) k = 1.0f;
 
-    // chaque canal est masqué puis multiplié par k (float)
-    uint32_t r = (uint32_t)((c & 0xFF) * k);
-    uint32_t g = (uint32_t)(((c >> 8) & 0xFF) * k);
-    uint32_t b = (uint32_t)(((c >> 16) & 0xFF) * k);
-    return 0xFF000000u | (b << 16) | (g << 8) | r;
+    const uint8_t sk = static_cast<uint8_t>(k);
+    uint32_t r = static_cast<uint32_t>((c >> 16) * sk);
+    uint32_t g = static_cast<uint32_t>((c >> 8) * sk);
+    uint32_t b = static_cast<uint32_t>((c * sk));
+    return ((uint32_t)0xFFu << 24) | (r << 16) | (g << 8) | b;
 }
 
 // Ordre des arguments : (r, g, b, a)

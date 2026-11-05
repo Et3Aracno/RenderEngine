@@ -141,7 +141,7 @@ void Renderer::renderTile(int tileIndex, const Material& mat)
 void Renderer::processTiles(const Material& mat)
 {
 	int tileIndex;
-	while ((tileIndex = nextTile_.fetch_add(1)) < (int)tiles_.size())
+	while ((tileIndex = nextTile_.fetch_add(1)) < static_cast<int>tiles_.size())
 		renderTile(tileIndex, mat);
 }
 
@@ -165,7 +165,7 @@ void Renderer::workerLoop(const Material& mat)
 
 void Renderer::startThreadPool(const Material& mat)
 {
-	int threadCount = (int)std::thread::hardware_concurrency();
+	int threadCount = static_cast<int>std::thread::hardware_concurrency();
 	if (threadCount < 1) threadCount = 1;
 	int workers = threadCount - 1;
 
@@ -197,9 +197,9 @@ void Renderer::rasterizeTri(const ScreenTri& t, const Tile& tile, const Material
 
 	for (int y = minY; y <= maxY; y++) {
 		for (int x = minX; x <= maxX; x++) {
-			int e0 = edge(Maths::Vec2S{ (float)t.x[1], (float)t.y[1] }, Maths::Vec2S{ (float)t.x[2], (float)t.y[2] }, Maths::Vec2S{ (float)x, (float)y });
-			int e1 = edge(Maths::Vec2S{ (float)t.x[2], (float)t.y[2] }, Maths::Vec2S{ (float)t.x[0], (float)t.y[0] }, Maths::Vec2S{ (float)x, (float)y });
-			int e2 = edge(Maths::Vec2S{ (float)t.x[0], (float)t.y[0] }, Maths::Vec2S{ (float)t.x[1], (float)t.y[1] }, Maths::Vec2S{ (float)x, (float)y });
+			int e0 = edge(Maths::Vec2S{ static_cast<float>t.x[1], static_cast<float>t.y[1] }, Maths::Vec2S{ static_cast<float>t.x[2], static_cast<float>t.y[2] }, Maths::Vec2S{ static_cast<float>x, static_cast<float>y });
+			int e1 = edge(Maths::Vec2S{ static_cast<float>t.x[2], static_cast<float>t.y[2] }, Maths::Vec2S{ static_cast<float>t.x[0], static_cast<float>t.y[0] }, Maths::Vec2S{ static_cast<float>x, static_cast<float>y });
+			int e2 = edge(Maths::Vec2S{ static_cast<float>t.x[0], static_cast<float>t.y[0] }, Maths::Vec2S{ static_cast<float>t.x[1], static_cast<float>t.y[1] }, Maths::Vec2S{ static_cast<float>x, static_cast<float>y });
 			if ((e0 | e1 | e2) < 0) continue;
 
 			float l0 = e0 * t.invArea;
@@ -272,7 +272,7 @@ void Renderer::project(const ClipVertex* tri)
 		st.ny[k] = tri[k].normal.y * invW[k];
 		st.nz[k] = tri[k].normal.z * invW[k];
 	}
-	st.invArea = 1.0f / (float)area;
+	st.invArea = 1.0f / static_cast<float>area;
 	st.minX = clampi(rMinX, 0, defaultWidth_ - 1);
 	st.maxX = clampi(rMaxX, 0, defaultWidth_ - 1);
 	st.minY = clampi(rMinY, 0, defaultHeight_ - 1);
@@ -297,7 +297,7 @@ void Renderer::drawMeshTextured(const Mesh& mesh, const Maths::Matrix4x4SIMD& mv
 	tris_.clear();
 
 	// Étape 2 : par triangle -> clipping, puis projection + dessin
-	const int faceCount = (int)mesh.faces.size() / 3;
+	const int faceCount = < static_cast<int>mesh.faces.size() / 3;
 	for (int f = 0; f < faceCount; f++) {
 		const int a = mesh.faces[f * 3 + 0];
 		const int b = mesh.faces[f * 3 + 1];
@@ -350,16 +350,14 @@ void Renderer::update()
 	std::vector<Maths::Vec3S> vertexNormals(mesh.verts.size());
 	computeFaceNormals(&mesh, faceNormals.data());
 	computeVertexNormals(&mesh, faceNormals.data(), vertexNormals.data());
+	
+	Renderer::window = glfwCreateWindow(defaultWidth, defaultHeight, "hello", NULL, NULL);
 
 	const uint64_t freq = glfwGetTimerFrequency();
 	const uint64_t start = glfwGetTimerValue();
 
-	window_ = glfwCreateWindow(defaultWidth_, defaultHeight_, "hello", NULL, NULL);
-	glfwMakeContextCurrent(window_);   // avant glfwSwapInterval
-	glfwSwapInterval(0);
-
 	// Projection and view stay fixed; only the model spins.
-	const float aspect = (float)defaultWidth_ / (float)defaultHeight_;
+	const float aspect = static_cast<float>defaultWidth_ / static_cast<float>defaultHeight_;
 
 	// 60-degree vertical field of view (radians() converts to the
 	// radians the math needs); window shape; near and far clip
@@ -373,17 +371,21 @@ void Renderer::update()
 	const Maths::Vec3S up{ 0, 1, 0 };
 	const Maths::Matrix4x4SIMD view = Maths::Matrix4x4SIMD::LookAt(eye, target, up);
 
+	glfwMakeContextCurrent(window_);  // avant glfwSwapInterval
 	buildTiles();
 	startThreadPool(material);
 
 	double lastTime = glfwGetTime();
 	int frameCount = 0;
 
+	Color color(16, 16, 24);
+	glfwSwapInterval(0);
+
 	while (!glfwWindowShouldClose(window_)) {
 		glfwPollEvents();
 
-		double seconds = (double)(glfwGetTimerValue() - start) / (double)freq;   // tick / frequence = temps en seconde
-		float angle = (float)seconds;   // 1 radian par seconde
+		double seconds = static_cast<double>(glfwGetTimerValue() - start) / static_cast<double>(freq);   // tick / frequence = temps en seconde
+		float angle = static_cast<float>seconds;   // 1 radian par seconde
 
 		Maths::Matrix4x4SIMD model = Maths::Matrix4x4SIMD::RotationY(angle * 0.7f);
 		Maths::Matrix4x4SIMD mvp = projection * view * model;

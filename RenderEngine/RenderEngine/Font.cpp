@@ -161,11 +161,6 @@ bool Font::parseCmap()
             std::cerr << "Wrong address\n";
 
         m_cmapSubtable = cmapAbsoluteloc;
-
-
-        std::cout << "platform=" << platformID << " encoding=" << encodingId
-            << " subtable=" << m_cmapSubtable
-            << " format=" << readU16(m_cmapSubtable) << "\n";
         return true;
     }
 

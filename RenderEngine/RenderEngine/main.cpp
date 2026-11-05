@@ -1,11 +1,29 @@
 #include <iostream>
 #include <memory>
 #include "Renderer.h"
+#include "ECS.h"
+
 int main()
 {
-	Renderer renderer;
-	renderer.init();
-	renderer.update();
+	ECS ecs;
+	EntityManager& em = ecs.getEntityManager();
 
+	int rendererID = em.createComponentStorage<Renderer>();   
+	int entity = em.createEntity();                       
+
+	Renderer renderer;
+	em.addComponent(entity, rendererID, &renderer); 
+
+	ecs.addSystem([rendererID](EntityManager& em) {           
+		for (int entity : em.fetchAllEntities({ rendererID }))     
+		{
+			Renderer* r = static_cast<Renderer*>(em.getComponent(entity, rendererID));
+			
+			r->init();
+			r->update();                                      
+		}
+	});
+
+	ecs.executeSystems();                                     
 	return 0;
 }

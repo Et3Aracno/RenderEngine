@@ -22,9 +22,6 @@
     <Filter Include="src\Core">
       <UniqueIdentifier>{a670aaa9-5de8-4c83-958f-bb1d853e5bb8}</UniqueIdentifier>
     </Filter>
-    <Filter Include="src\MeshLoader">
-      <UniqueIdentifier>{025b4e2b-a9ce-410b-b174-4b2f669cd285}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Headers\MeshRLoader">
       <UniqueIdentifier>{cae63105-9724-4010-95a0-6c915d2fdfff}</UniqueIdentifier>
     </Filter>
@@ -33,9 +30,6 @@
     </Filter>
     <Filter Include="Headers\TextureLoader">
       <UniqueIdentifier>{c7ea3562-44cf-47d5-8ec0-c2eafba0921f}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\Clip">
-      <UniqueIdentifier>{e3eb2243-305c-4651-a956-9c606efe17b9}</UniqueIdentifier>
     </Filter>
     <Filter Include="Headers\Clip">
       <UniqueIdentifier>{50f2da1c-ea84-49bb-a878-8d4548ebb23e}</UniqueIdentifier>
@@ -58,11 +52,31 @@
     <Filter Include="src\Renderer">
       <UniqueIdentifier>{54e9a0c9-de61-4d40-b38f-4ab7f0fd0c91}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Headers\ParticuleSystem">
+    <Filter Include="Headers\ParticleSystem">
       <UniqueIdentifier>{dce017cf-ae14-4729-9959-46dac50d32b5}</UniqueIdentifier>
     </Filter>
-    <Filter Include="src\ParticuleSystem">
+    <Filter Include="src\ParticleSystem">
       <UniqueIdentifier>{7488103a-603e-4788-bf70-f7edafac3e9a}</UniqueIdentifier>
+    <Filter Include="Headers\ECS">
+      <UniqueIdentifier>{831bda94-c5c8-47f0-990c-767e26d663ea}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Headers\ECS\EntityManager">
+      <UniqueIdentifier>{a0ee3993-3e37-4e66-8f1e-a194f7582274}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Headers\ECS\Component">
+      <UniqueIdentifier>{39733ed4-8775-42e7-a6a8-56b84fe76d32}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\ECS">
+      <UniqueIdentifier>{f903e319-ed0e-43d4-895d-86147a91ffe8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\ECS\EntityManager">
+      <UniqueIdentifier>{ba0345c2-6f9e-469f-a7df-b38c20b8d369}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\ECS\Component">
+      <UniqueIdentifier>{ca146e3c-05be-46fe-832e-78350cfb8c2c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\MeshLoader">
+      <UniqueIdentifier>{025b4e2b-a9ce-410b-b174-4b2f669cd285}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -95,6 +109,11 @@
     </ClCompile>
     <ClCompile Include="Emitter.cpp">
       <Filter>src\ParticuleSystem</Filter>
+    <ClCompile Include="EntityManager.cpp">
+      <Filter>src\ECS\EntityManager</Filter>
+    </ClCompile>
+    <ClCompile Include="ComponentManager.inl">
+      <Filter>src\ECS\Component</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -128,5 +147,19 @@
     <ClInclude Include="ParticleSystem.h">
       <Filter>Headers\ParticuleSystem</Filter>
     </ClInclude>
+    <ClInclude Include="EntityManager.h">
+      <Filter>Headers\ECS\EntityManager</Filter>
+    </ClInclude>
+    <ClInclude Include="ComponentManager.h">
+      <Filter>Headers\ECS\Component</Filter>
+    </ClInclude>
+    <ClInclude Include="ECS.h">
+      <Filter>Headers\ECS</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="EntityManager.inl">
+      <Filter>Headers</Filter>
+    </None>
   </ItemGroup>
 </Project>

@@ -93,8 +93,8 @@ public:
 	Renderer();
 	~Renderer();
 
-	Renderer(const Renderer&) = delete;
-	Renderer& operator=(const Renderer&) = delete;
+	Renderer(const Renderer&) = default;
+	Renderer& operator=(const Renderer&) = default;
 
 	static Renderer* instance() { return instance_; }
 

@@ -6,13 +6,13 @@
 uint32_t Material::shadeChannel(uint32_t texel, int shift,
     float diffuseK, float specK, float metallic)
 {
-    float c = ((texel >> shift) & 0xFF) / 255.0f;
+	float c = ((texel >> shift) & 0xFF) / 255.0f;// Normalisation du canal de couleur
 
-    float specColor = 1.0f + (c - 1.0f) * metallic;
-    float val = c * diffuseK * (1.0f - metallic) + specColor * specK;
+    float specColor = 1.0f + (c - 1.0f) * metallic; // Mélange entre la couleur du matériau et la couleur spéculaire (blanc) en fonction de la valeur de metallic
+    float val = c * diffuseK * (1.0f - metallic) + specColor * specK; // Calcul de la valeur finale du canal en combinant la couleur diffuse et spéculaire, en tenant compte de la valeur de metallic
 
     if (val > 1.0f) val = 1.0f;
-    return (uint32_t)(val * 255.0f);
+	return static_cast<uint32_t>(val * 255.0f);// Conversion de la valeur , on tronque à 255
 }
 
 uint32_t Material::rdPass(uint32_t src, uint32_t dst) const
@@ -22,11 +22,11 @@ uint32_t Material::rdPass(uint32_t src, uint32_t dst) const
     const float alpha = getOpacity();
     const float invAlpha = 1.0f - alpha;
 
-    uint32_t r = (uint32_t)(alpha * cSrc.r() + invAlpha * cDst.r());
-    uint32_t g = (uint32_t)(alpha * cSrc.g() + invAlpha * cDst.g());
-    uint32_t b = (uint32_t)(alpha * cSrc.b() + invAlpha * cDst.b());
+    uint32_t r = static_cast<uint32_t>(alpha * cSrc.r() + invAlpha * cDst.r() + 0.5f);
+    uint32_t g = static_cast<uint32_t>(alpha * cSrc.g() + invAlpha * cDst.g() + 0.5f);
+    uint32_t b = static_cast<uint32_t>(alpha * cSrc.b() + invAlpha * cDst.b() + 0.5f);
 
-    return 0xFF000000u | (b << 16) | (g << 8) | r;
+	return 0xFF000000u | (b << 16) | (g << 8) | r;
 }
 
 uint32_t Material::shade(float u, float v, float nDotL, float nDotH) const
@@ -47,7 +47,7 @@ uint32_t Material::shade(float u, float v, float nDotL, float nDotH) const
     uint32_t r = shadeChannel(texel, 0, diffuseK, specK, metallic_);
     uint32_t g = shadeChannel(texel, 8, diffuseK, specK, metallic_);
     uint32_t b = shadeChannel(texel, 16, diffuseK, specK, metallic_);
-    uint32_t a = (uint32_t)(alpha * 255.0f + 0.5f);
+    uint32_t a = static_cast<uint32_t>(alpha * 255.0f + 0.5f);
 
     return (a << 24) | (b << 16) | (g << 8) | r;
 }
