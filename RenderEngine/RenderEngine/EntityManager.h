@@ -27,19 +27,19 @@ public:
 
 
 
-	void  addComponent(int entity, int componentID, void* value);
-	void  removeComponent(int entity, int componentID);
-	bool  hasComponent(int entity, int componentID) const;
-	void* getComponent(int entity, int componentID);
+	void  addComponent(int entity, int componentId, void* value);
+	void  removeComponent(int entity, int componentId);
+	bool  hasComponent(int entity, int componentId) const;
+	void* getComponent(int entity, int componentId);
 
-	std::vector<int> fetchAllEntities(std::initializer_list<int> componentIDs) const;
+	std::vector<int> fetchAllEntities(std::initializer_list<int> componentIds) const;
 
 private:
-	int nextEntityID = 0;
-	std::vector<int> freeEntityIDs;
-	std::array<bool, MAX_ENTITIES> alive{};
-	std::array<std::bitset<MAX_COMPONENTS>, MAX_ENTITIES>  entityComponents{};
-	std::vector<IComponentManager*> componentManagers;
+	int nextEntityId_ = 0;
+	std::vector<int> freeEntityIds_;
+	std::array<bool, MAX_ENTITIES> alive_{};
+	std::array<std::bitset<MAX_COMPONENTS>, MAX_ENTITIES> entityComponents_{};
+	std::vector<IComponentManager*> componentManagers_;
 };
 
 #include "EntityManager.inl"

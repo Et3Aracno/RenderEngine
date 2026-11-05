@@ -23,8 +23,8 @@ template <typename T>
 class ComponentManager : public IComponentManager
 {
 private:
-	std::array<std::optional<T>, MAX_ENTITIES>    componentStorage;
-	std::array<bool, MAX_ENTITIES> hasComponentArray;
+	std::array<std::optional<T>, MAX_ENTITIES> componentStorage_;
+	std::array<bool, MAX_ENTITIES> hasComponentArray_;
 
 public:
 	ComponentManager();
