@@ -8,8 +8,6 @@
 #include "Emitter.h"
 
 
-// Donnees qui varient d'une particule a l'autre (tirees dans l'Emitter a la creation).
-// Types triviaux uniquement : obligatoire pour la partager avec next_ dans l'union.
 struct ParticleAttributes {
 	Maths::Vec3S pos;
 	Maths::Vec3S dir;
