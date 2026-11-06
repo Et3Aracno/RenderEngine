@@ -8,6 +8,7 @@
 #include "GLFW/glfw3.h"
 #include "Font.h"
 #include "ParticleSystem.h"
+#include "External Lib/MathLibrary/MathLib.h"
 
 
 struct Mesh;

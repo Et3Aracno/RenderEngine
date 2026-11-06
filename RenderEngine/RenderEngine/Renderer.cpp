@@ -431,7 +431,7 @@ void Renderer::update()
 
 	auto emitters = Emitter::loadFromFile("assets/EmitterConfig.xml");
 
-	particleSystem.emplace_back(emitters[0], material, Maths::Vec3S(300, 500, 0));
+	particleSystem.emplace_back(emitters[0], opaqueMat, Maths::Vec3S(300, 500, 0));
 
 	glfwMakeContextCurrent(window_);  // avant glfwSwapInterval
 	const Maths::Matrix4x4SIMD viewProj = projection * view;
@@ -448,8 +448,8 @@ void Renderer::update()
 	while (!glfwWindowShouldClose(window_)) {
 		glfwPollEvents();
 
-		const double seconds = static_cast<double>(glfwGetTimerValue() - start) / static_cast<double>(freq);
-		const float angle = static_cast<float>(seconds);
+		const double seconds = static_cast<double>(glfwGetTimerValue() - start) / static_cast<double>(freq); // tick / frequence = temps en seconde
+		const float angle = static_cast<float>(seconds);  // 1 radian par seconde
 
 		// Un model par vache : Translation * Rotation = tourne sur place à sa position
 		const Maths::Matrix4x4SIMD rot = Maths::Matrix4x4SIMD::RotationY(angle * 0.7f);
@@ -468,19 +468,16 @@ void Renderer::update()
 		float dt = static_cast<float>(now - lastTime);
 		lastTime = now;
 
-		double seconds = static_cast<double>(glfwGetTimerValue() - start) / static_cast<double>(freq);   // tick / frequence = temps en seconde
-		float angle = static_cast<float>(seconds);   // 1 radian par seconde
-
 		drawMeshTextured(mesh, viewProj * modelGlass, modelGlass,faceNormals.data(), vertexNormals.data(), glassMat);
 
-		drawMeshTextured(mesh, mvp, model, faceNormals.data(), vertexNormals.data(), material);
+		drawMeshTextured(mesh, viewProj * modelOpaque, modelOpaque, faceNormals.data(), vertexNormals.data(), opaqueMat);
 
 		for (ParticleSystem& ps : particleSystem) {
 			ps.update(dt);
 			sprites.clear();
 			ps.render(sprites);
 			for (const ParticleSprite& sp : sprites)
-				drawParticleSprite(sp, material);
+				drawParticleSprite(sp, opaqueMat);
 		}
 		drawBitmap(label, 20, 10, Color(200, 255, 255));
 		
