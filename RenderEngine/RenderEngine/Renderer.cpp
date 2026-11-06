@@ -238,6 +238,51 @@ void Renderer::rasterizeTri(const ScreenTri& t, const Tile& tile, const Material
 	}
 }
 
+void Renderer::drawParticleSprite(const ParticleSprite& sprite, const Material& mat)
+{
+	const float half = sprite.size * 0.5f;
+	if (half <= 0.f) return;
+
+	const float c = std::cos(sprite.rotation);
+	const float s = std::sin(sprite.rotation);
+	const float extent = half * 1.4143f;      // demi-diagonale : couvre le quad même tourné
+
+	const int minX = std::max(0, (int)std::floor(sprite.pos.x - extent));
+	const int maxX = std::min(defaultWidth_ - 1, (int)std::ceil(sprite.pos.x + extent));
+	const int minY = std::max(0, (int)std::floor(sprite.pos.y - extent));
+	const int maxY = std::min(defaultHeight_ - 1, (int)std::ceil(sprite.pos.y + extent));
+
+	const auto texture = mat.getAlbedoMap();
+	const float tintA = sprite.color.a() / 255.0f;
+
+	for (int y = minY; y <= maxY; y++) {
+		for (int x = minX; x <= maxX; x++) {
+			// pixel -> repère local du sprite (rotation inverse)
+			const float dx = (x + 0.5f) - sprite.pos.x;
+			const float dy = (y + 0.5f) - sprite.pos.y;
+			const float lx = c * dx + s * dy;
+			const float ly = -s * dx + c * dy;
+			if (std::fabs(lx) > half || std::fabs(ly) > half) continue;
+
+			const float u = lx / sprite.size + 0.5f;
+			const float v = ly / sprite.size + 0.5f;
+
+			const Color texel(texture ? texture->sampleBilinear(u, v) : 0xFFFFFFFFu);
+
+			// texel * teinte
+			const float r = (texel.r() / 255.0f) * (sprite.color.r() / 255.0f);
+			const float g = (texel.g() / 255.0f) * (sprite.color.g() / 255.0f);
+			const float b = (texel.b() / 255.0f) * (sprite.color.b() / 255.0f);
+			const float a = (texel.a() / 255.0f) * tintA;
+
+			const int idx = y * defaultWidth_ + x;
+			const Color dst(framebuffer_[idx]);
+
+			framebuffer_[idx] = Color(255, 105, 180, 255).getRgb();
+		}
+	}
+}
+
 void Renderer::project(const ClipVertex* tri)
 {
 	int   sx[3], sy[3];
@@ -358,6 +403,9 @@ void Renderer::update()
 	std::vector<Maths::Vec3S> vertexNormals(mesh.verts.size());
 	computeFaceNormals(&mesh, faceNormals.data());
 	computeVertexNormals(&mesh, faceNormals.data(), vertexNormals.data());
+
+	std::vector<ParticleSystem> particleSystem;
+	std::vector<ParticleSprite> sprites;
 	
 	Renderer::window_ = glfwCreateWindow(defaultWidth_, defaultHeight_, "hello", NULL, NULL);
 
@@ -379,6 +427,10 @@ void Renderer::update()
 	const Maths::Vec3S up{ 0, 1, 0 };
 	const Maths::Matrix4x4SIMD view = Maths::Matrix4x4SIMD::LookAt(eye, target, up);
 
+	auto emitters = Emitter::loadFromFile("assets/EmitterConfig.xml");
+
+	particleSystem.emplace_back(emitters[0], material, Maths::Vec3S(300, 500, 0));
+
 	glfwMakeContextCurrent(window_);  // avant glfwSwapInterval
 	buildTiles();
 	startThreadPool(material);
@@ -392,6 +444,10 @@ void Renderer::update()
 	while (!glfwWindowShouldClose(window_)) {
 		glfwPollEvents();
 
+		double now = glfwGetTime();
+		float dt = static_cast<float>(now - lastTime);
+		lastTime = now;
+
 		double seconds = static_cast<double>(glfwGetTimerValue() - start) / static_cast<double>(freq);   // tick / frequence = temps en seconde
 		float angle = static_cast<float>(seconds);   // 1 radian par seconde
 
@@ -399,8 +455,16 @@ void Renderer::update()
 		Maths::Matrix4x4SIMD mvp = projection * view * model;
 
 		drawMeshTextured(mesh, mvp, model, faceNormals.data(), vertexNormals.data(), material);
-		drawBitmap(label, 20, 10, Color(200, 255, 255));
 
+		for (ParticleSystem& ps : particleSystem) {
+			ps.update(dt);
+			sprites.clear();
+			ps.render(sprites);
+			for (const ParticleSprite& sp : sprites)
+				drawParticleSprite(sp, material);
+		}
+		drawBitmap(label, 20, 10, Color(200, 255, 255));
+		
 		glDrawPixels(defaultWidth_, defaultHeight_, GL_RGBA, GL_UNSIGNED_BYTE, framebuffer_);
 		glfwSwapBuffers(window_);
 

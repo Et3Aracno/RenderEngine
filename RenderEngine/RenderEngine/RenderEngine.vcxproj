@@ -147,6 +147,9 @@
     <ClCompile Include="EditorCore.cpp" />
     <ClCompile Include="Emitter.cpp" />
     <ClCompile Include="EntityManager.cpp" />
+    <ClCompile Include="External Lib\Parser\tinyxml2.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="Font.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Material.cpp" />

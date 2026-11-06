@@ -16,6 +16,7 @@
 #include "Color.h"
 #include "GLFW/glfw3.h"
 #include "Font.h"
+#include "ParticleSystem.h"
 
 
 class Mesh;
@@ -84,6 +85,7 @@ protected:
 	void clearAllBuffer();
 
 	static void rasterizeTri(const ScreenTri& t, const Tile& tile, const Material& mat);
+	static void drawParticleSprite(const ParticleSprite& sprite, const Material& mat);
 	void drawBitmap(const Bitmap& bmp, int x, int y, Color color);
 
 public:

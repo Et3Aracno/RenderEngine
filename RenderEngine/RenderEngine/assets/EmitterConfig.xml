@@ -12,7 +12,6 @@
 		<emitNumber value="1"/>
 		<emitVariance value="0" randMin="0" randMax="1"/>
 		<maxParticleLife value="100" randMin="0" randMax="1"/>
-		<textureRect x="0" y="0" w="128" h="128"/>
 		<startColor r="255" g="100" b="0" a="255"/>
 		<endColor r="210" g="210" b="210" a="0"/>
 		<blendMode mode="add"/>
@@ -30,7 +29,6 @@
 		<emitNumber value="1"/>
 		<emitVariance value="0" randMin="0" randMax="1"/>
 		<maxParticleLife value="220" randMin="0" randMax="1"/>
-		<textureRect x="0" y="0" w="128" h="128"/>
 		<startColor r="70" g="70" b="70" a="180"/>
 		<endColor r="150" g="150" b="150" a="0"/>
 		<blendMode mode="alpha"/>
@@ -48,7 +46,6 @@
 		<emitNumber value="1"/>
 		<emitVariance value="0" randMin="0" randMax="1"/>
 		<maxParticleLife value="90" randMin="0" randMax="1"/>
-		<textureRect x="0" y="0" w="128" h="128"/>
 		<startColor r="255" g="255" b="255" a="120"/>
 		<endColor r="220" g="230" b="240" a="0"/>
 		<blendMode mode="alpha"/>
@@ -66,7 +63,6 @@
 		<emitNumber value="4"/>
 		<emitVariance value="2" randMin="0" randMax="1"/>
 		<maxParticleLife value="40" randMin="0" randMax="1"/>
-		<textureRect x="0" y="0" w="128" h="128"/>
 		<startColor r="255" g="240" b="150" a="255"/>
 		<endColor r="255" g="60" b="0" a="0"/>
 		<blendMode mode="add"/>
@@ -84,7 +80,6 @@
 		<emitNumber value="2"/>
 		<emitVariance value="1" randMin="0" randMax="1"/>
 		<maxParticleLife value="120" randMin="0" randMax="1"/>
-		<textureRect x="0" y="0" w="128" h="128"/>
 		<startColor r="120" g="80" b="255" a="255"/>
 		<endColor r="0" g="200" b="255" a="0"/>
 		<blendMode mode="add"/>
@@ -102,7 +97,6 @@
 		<emitNumber value="30"/>
 		<emitVariance value="10" randMin="0" randMax="1"/>
 		<maxParticleLife value="60" randMin="0" randMax="1"/>
-		<textureRect x="0" y="0" w="128" h="128"/>
 		<startColor r="255" g="200" b="50" a="255"/>
 		<endColor r="80" g="30" b="0" a="0"/>
 		<blendMode mode="add"/>
