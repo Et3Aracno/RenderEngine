@@ -47,7 +47,7 @@ bool Font::parseTableDirectory()
     tables_.clear();
 
     uint32_t version = readU32(0);
-    if (version != 0x00010000 && version != 0x74727565) { // 0x74727565 = 'true' pour les collections de polices en ASCII, et 0x00010000 = version classique du format TTF
+    if (version != 0x00010000 && version != 0x74727565) { // 0x00010000 = TrueType 1.0, 0x74727565 = 'true'
         throw std::runtime_error("please load a ttf file");
     }
 
@@ -72,8 +72,6 @@ bool Font::parseTableDirectory()
 
         tables_[tag] = info;
     }
-    for (const auto& [tag, info] : tables_)
-        std::cout << tag << " offset=" << info.offset << " length=" << info.length << "\n";
 
     return parseHeadAndMaxp();
 }
@@ -166,31 +164,31 @@ void Font::parseCmapSegments()
 
 uint16_t Font::getGlyphIndex(uint32_t codepoint) const
 {
-    // 0. hors BMP, ou 0xFFFF (segment terminal) : pas de glyphe
+    //hors BMP, ou 0xFFFF (segment terminal) : pas de glyphe
     if (codepoint >= 0xFFFF)
         return 0;
 
     for (size_t i = 0; i < segCount_; ++i)
     {
-        // 1. segment trop bas : on passe au suivant
+        // segment trop bas : on passe au suivant
         if (codepoint > readU16(endCodeAddr_ + 2 * i))
             continue;
 
-        // 2. on est dans le premier segment dont end >= codepoint
+        // on est dans le premier segment dont end >= codepoint
         uint16_t start = readU16(startCodeAddr_ + 2 * i);
         if (codepoint < start)
             return 0;                       // trou entre deux segments
 
-        // 3. les deux autres valeurs du segment
+        // les deux autres valeurs du segment
         uint16_t delta = readU16(idDeltaAddr_ + 2 * i);
         size_t   rangeAddr = idRangeOffsetAddr_ + 2 * i;
         uint16_t range = readU16(rangeAddr);
 
-        // 4. raccourci : pas de glyphIdArray
+        // raccourci : pas de glyphIdArray
         if (range == 0)
             return static_cast<uint16_t>((codepoint + delta) & 0xFFFF);
 
-        // 5. lecture dans glyphIdArray, adresse relative à la case idRangeOffset[i]
+        // lecture dans glyphIdArray, adresse relative à la case idRangeOffset[i]
         size_t addr = rangeAddr + range + 2 * (codepoint - start);
         if (addr + 1 >= data_.size())
             return 0;
@@ -282,7 +280,7 @@ bool Font::loadGlyph(uint16_t glyphIndex, GlyphOutline& out) const
     if (contourCount <= 0)            // négatif : composite (non géré)
         return false;
 
-    // 3. Fins de contours
+    // Fins de contours
     size_t nc = static_cast<size_t>(contourCount);
     if (p + 2 * nc + 2 > end)         // endPts + instructionLength doivent tenir
         return false;
@@ -298,13 +296,13 @@ bool Font::loadGlyph(uint16_t glyphIndex, GlyphOutline& out) const
 
     size_t pointCount = static_cast<size_t>(out.endPts.back()) + 1;
 
-    // 4. Instructions : on saute
+    // Instructions : on saute
     uint16_t instructionLength = readU16(p);
     p += 2 + instructionLength;
     if (p > end)
         return false;
 
-    // 5. Flags (avec répétition)
+    // Flags (avec répétition)
     std::vector<uint8_t> flags;
     flags.reserve(pointCount);
     while (flags.size() < pointCount)
@@ -322,7 +320,7 @@ bool Font::loadGlyph(uint16_t glyphIndex, GlyphOutline& out) const
         }
     }
 
-    // 6. Coordonnées x (toutes les x d'abord)
+    // Coordonnées x (toutes les x d'abord)
     out.points.resize(pointCount);
     int x = 0;
     for (size_t i = 0; i < pointCount; ++i)
@@ -346,7 +344,7 @@ bool Font::loadGlyph(uint16_t glyphIndex, GlyphOutline& out) const
         out.points[i].isOnCurve = (f & 0x01) != 0;
     }
 
-    // 7. Coordonnées y (même logique, bits 0x04 et 0x20)
+    // Coordonnées y (même logique, bits 0x04 et 0x20)
     int y = 0;
     for (size_t i = 0; i < pointCount; ++i)
     {
@@ -404,7 +402,7 @@ std::vector<std::vector<Maths::Vec2S>> Font::flattenOutline(const GlyphOutline& 
         size_t n = last - first + 1;
         if (n < 2) { first = last + 1; continue; }   // contour dégénéré
 
-        // 1. Liste cyclique avec points on-curve implicites
+        // Liste cyclique avec points on-curve implicites
         std::vector<P> pts;
         for (size_t i = 0; i < n; ++i)
         {
@@ -419,13 +417,13 @@ std::vector<std::vector<Maths::Vec2S>> Font::flattenOutline(const GlyphOutline& 
                 pts.push_back({ midpoint(c, d), true });
         }
 
-        // 2. Commencer sur un point on-curve
+        // Commencer sur un point on-curve
         size_t s = 0;
         while (s < pts.size() && !pts[s].isOn) ++s;
         if (s == pts.size()) { first = last + 1; continue; }
         std::rotate(pts.begin(), pts.begin() + s, pts.end());
 
-        // 3. Parcours
+        // Parcours
         size_t m = pts.size();
         std::vector<Maths::Vec2S> poly;
         Maths::Vec2S cur = pts[0].p;
@@ -450,7 +448,7 @@ std::vector<std::vector<Maths::Vec2S>> Font::flattenOutline(const GlyphOutline& 
             }
         }
 
-        // 4. Le dernier point retombe sur le premier : on retire le doublon
+        // Le dernier point retombe sur le premier : on retire le doublon
         if (poly.size() > 1)
             poly.pop_back();
 
@@ -479,7 +477,7 @@ void Font::fill(const std::vector<std::vector<Maths::Vec2S>>& contours, Bitmap& 
         for (const auto& poly : contours)
             for (size_t i = 0; i < poly.size(); ++i)
             {
-                Maths::Vec2S a = poly[i], b = poly[(i + 1) % poly.size()];
+				Maths::Vec2S a = poly[i], b = poly[(i + 1) % poly.size()]; // modulo pour revenir au premier point quand on est sur le dernier , on l'utilise pour le remplissage de la police de caractère
                 if ((a.y <= sy) != (b.y <= sy))
                     xs.push_back(a.x + (sy - a.y) / (b.y - a.y) * (b.x - a.x));
             }
@@ -487,8 +485,8 @@ void Font::fill(const std::vector<std::vector<Maths::Vec2S>>& contours, Bitmap& 
 
         for (size_t i = 0; i + 1 < xs.size(); i += 2)
         {
-            int x0 = std::max(0, int(std::ceil(xs[i] - 0.5f)));
-            int x1 = std::min(bmp.width, int(std::ceil(xs[i + 1] - 0.5f)));
+            int x0 = std::max(0, static_cast<int>(std::ceil(xs[i] - 0.5f)));
+            int x1 = std::min(bmp.width, static_cast<int>(std::ceil(xs[i + 1] - 0.5f)));
             for (int x = x0; x < x1; ++x)
                 bmp.pixels[y * bmp.width + x] = 255;
         }
@@ -506,7 +504,7 @@ Bitmap Font::renderText(const std::string& text, float pixelSize) const
     for (char c : text)
         total += getAdvanceWidth(getGlyphIndex((unsigned char)c)) * scale;
 
-    Bitmap bmp(int(std::ceil(total)) + 1, int(std::ceil(ascent + descent)) + 1);
+    Bitmap bmp(static_cast<int>(std::ceil(total)) + 1, static_cast<int>(std::ceil(ascent + descent)) + 1); //ceil() arrondit à l'entier supérieur.
 
     float penX = 0;
     for (char c : text)

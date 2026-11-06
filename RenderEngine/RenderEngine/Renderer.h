@@ -1,26 +1,17 @@
 #pragma once
-#include <iostream>
 #include <vector>
-#include <algorithm>
 #include <atomic>
 #include <barrier>
 #include <memory>
 #include <thread>
-#include <stdint.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <math.h>
-#include <stdlib.h>
-#include <limits>
-#include "External Lib/MathLibrary/MathLib.h"
 #include "Color.h"
 #include "GLFW/glfw3.h"
 #include "Font.h"
 #include "ParticleSystem.h"
 
 
-class Mesh;
-class ClipVertex;
+struct Mesh;
+struct ClipVertex;
 class Material;
 
 
@@ -53,22 +44,23 @@ private:
 	static inline std::unique_ptr<std::barrier<>> endBarrier_;
 	static inline std::atomic<int>  nextTile_{ 0 };
 	static inline std::atomic<bool> shouldQuit_{ false };
+	static inline const Material* currentMaterial_ = nullptr;
 
 	static inline std::vector<Tile>      tiles_;
 	static inline std::vector<ScreenTri> tris_;
 	static inline int tilesX_ = 0, tilesY_ = 0;
 
 	static int  edge(Maths::Vec2S v1, Maths::Vec2S v2, Maths::Vec2S p);
-	static void clearColor(uint32_t color); //////////// A VOIR
+	static void clearColor(uint32_t color);
 	static void clearZbuffer();
 
 	static int  clampi(int v, int lo, int hi);
 	static void computeFaceNormals(const Mesh* mesh, Maths::Vec3S* out);
 	static void computeVertexNormals(const Mesh* mesh, const Maths::Vec3S* faceNormals, Maths::Vec3S* out);
 
-	static void startThreadPool(const Material& mat);
+	static void startThreadPool();
 	static void stopThreadPool();
-	static void workerLoop(const Material& mat);
+	static void workerLoop();
 
 protected:
 	static void buildTiles(); // Done once or window changes size

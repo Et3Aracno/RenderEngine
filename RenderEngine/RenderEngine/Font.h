@@ -8,7 +8,7 @@
 struct GlyphPoint
 {
     Maths::Vec2S pointCord;
-    bool isOnCurve;
+    bool isOnCurve = false;
 };
 
 struct GlyphOutline
@@ -22,7 +22,7 @@ struct Bitmap
 {
     int width, height;
     std::vector<uint8_t> pixels;
-    Bitmap(int w, int h) : width(w), height(h), pixels(w* h, 0) {}
+    Bitmap(int w, int h) : width(w), height(h), pixels(w * h, 0) {}
 };
 
 class Font
@@ -35,7 +35,9 @@ private:
     size_t idRangeOffsetAddr_ = 0;
 
     static void fill(const std::vector<std::vector<Maths::Vec2S>>& contours, Bitmap& bmp);
+
 protected:
+
     bool parseCmap();
     size_t cmapSubtable_ = 0;     // adresse absolue (dans data_) de la sous-table format 4
 
@@ -50,17 +52,10 @@ protected:
 
 public:
 
-
-    int16_t ascender_ = 0;
-    int16_t descender_ = 0;
-    int16_t lineGap_ = 0;
-    uint16_t numHMetrics_ = 0;
     uint16_t unitsPerEm_ = 0; //échelle de la police de caractère
     int16_t indexToLocFormat_ = 0; // 0 = format court donc on le met en readU16 * 2 sinon si c'est 1 c'est le format long et on le laisse en readU32 
     uint16_t numGlyphs_ = 0;
     static std::vector<std::vector<Maths::Vec2S>> flattenOutline(const GlyphOutline& g, int steps = 8);
-
-
 
     bool loadFont(const std::string& path);
     size_t getDataSize()const { return data_.size(); }
@@ -70,8 +65,6 @@ public:
     bool parseTableDirectory();
     bool parseHeadAndMaxp();
     void parseCmapSegments();
-    bool parseHhea();
-    int16_t  getLeftSideBearing(uint16_t glyphIndex) const;
     bool loadGlyph(uint16_t glyphIndex, GlyphOutline& out) const;
     bool getGlyphLocation(uint16_t glyphIndex, size_t& offset, size_t& length) const;
     uint16_t getGlyphIndex(uint32_t codepoint) const;

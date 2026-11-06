@@ -17,6 +17,7 @@ namespace Maths
 
         Vec2S();
         Vec2S(float _x, float _y);
+        Vec2S(int _x, int _y);
         Vec2S(const Vec2S& other);
 
         static __m128 Load(const Maths::Vec2S& v);
