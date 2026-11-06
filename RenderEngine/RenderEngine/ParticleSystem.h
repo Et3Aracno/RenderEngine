@@ -91,7 +91,6 @@ class ParticleSystem {
 
 	Maths::Vec3S position_;
 	float elapsed_ = 0.f;  // compare lifetime_
-	float emitAccumulator_ = 0.f;
 	bool hasAlive_ = false;
 
 	static constexpr float tickRate_ = 60.f; // seconds
