@@ -109,13 +109,9 @@ void ParticleSystem::update(float dt)
 
 	const bool canEmit = emitter_.isInfinite() || elapsed_ < emitter_.getLifetime();
 	if (canEmit) {
-		emitAccumulator_ += dt * tickRate_;
-		while (emitAccumulator_ >= 1.f) {
-			emitAccumulator_ -= 1.f;
-			const int count = emitter_.rollEmitCount(rng_);
-			for (int i = 0; i < count; i++)
-				pool_.generate(position_, emitter_, rng_);
-		}
+		const int count = emitter_.rollEmitCount(rng_);
+		for (int i = 0; i < count; i++)
+			pool_.generate(position_, emitter_, rng_);
 	}
 
 	hasAlive_ = pool_.update(dt);
