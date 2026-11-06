@@ -381,7 +381,6 @@ void Renderer::init()
 
 void Renderer::update()
 {
-
 	auto texture = std::make_shared<Texture>();
 	texture->load("assets/spot_texture.png");
 
